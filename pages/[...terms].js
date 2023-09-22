@@ -297,6 +297,7 @@ function isNumber(char) {
 
 function validateTerm(term) {
   let good = {valid: true};
+  let dash = false;
   if (term[0] == 'B' || term[0] == 'S') {
     let last = '0' - 1;
     let letters = false;
@@ -321,21 +322,24 @@ function validateTerm(term) {
         else if (last == '4') {
           ok = ['t','w','z'];
         }
-        if (!ok.includes(term[i])) {
-         
-        console.log(ok, term[i]);
+      	if (!ok.includes(term[i])) {
+        	console.log(ok, term[i]);
           return {valid: false, msg: term[i] + " is not a valid hensel notation symbol", index: [i,i+1]};
         }
-        continue;
       }
       else if (!isNumber(term[i]) || last >= term[i] || dash) {
         return {valid: false, msg: term[0] + " term expects only ascending digits (example: " + term[0] + "23)", index: [i,i+1]};
         
       }
-      letters = false;
-      last = term[i];
+      else {
+        if (dash) {
+          return {false: false, msg: term[i] + " is unbound to any pattern specifiers (example: 2-a)", index: [i-1, i]};
+        }
+        letters = false;
+        last = term[i];
+      }
     }
-    return good;
+    return dash ? {false: false, msg: term[i] + " is unbound to any pattern specifiers (example: 2-a)", index: [i-1, i]} : good;
   }
   else if (term[0] == 'G') {
     if (term.length != 2 || !isNumber(term[1])) {
@@ -379,7 +383,7 @@ function validateRule(terms) {
 }
 
 function sortedIncludes(array, value) {
-  if (array.length == 0 || array[0].neighbors > value || array[array.length-1].neighbors < value) {
+  if (!array || array.length == 0 || array[0].neighbors > value || array[array.length-1].neighbors < value) {
     return false;
   }
   for (let i = 0; i < array.length; i++) {
@@ -397,7 +401,29 @@ function toRuleString(terms) {
   return str;
 }
 
-
+function getNegation(obj) {
+  const neighbors = obj.neighbors;
+  const patterns = obj.pattern;
+  let all = [];
+  if (neighbors == 1 || neighbors == 7) {
+    all = ['c','e'];
+  }
+  else if (neighbors == 2 || neighbors == 6) {
+    all = ['c','e','a','k','i','n'];
+  }
+  else if (neighbors == 3 || neighbors == 5) {
+    all = ['c','e','a','k','i','n','y','q','j','r'];
+  }
+  else if (neighbors == 4) {
+   all = ['t','w','z'];
+  }
+  let neg = [];
+  for (let i = 0; i < all.length; i++) {
+    if (!patterns.includes(all[i])) neg.push(all[i]);
+  }
+  console.log("negation of ", patterns, neighbors, neg);
+  return {pattern: neg, neighbors}; 
+}
 
 function toRuleObj(terms) {
   let transitions = {
@@ -411,29 +437,36 @@ function toRuleObj(terms) {
     let dash = false;
     for (let j = 1; j < terms[i].length; j++) {
       if (tchar == 'B') {
+        const l = transitions.born.length-1;
         if (terms[i][j] >= 'a' && terms[i][j] <= 'z') {
           //transitions.born.push({pattern: terms[i][j], neighbors: last - '0'});
-          if (transitions.born[transitions.born.length-1].pattern == false) {
-            transitions.born[transitions.born.length-1].pattern = [dash ? "-" + terms[i][j] : terms[i][j]];
+          if (transitions.born[l].pattern == false) {
+            transitions.born[l].pattern = [terms[i][j]];
           }
-          else transitions.born[transitions.born.length-1].pattern.push(dash ? "-" + terms[i][j] : terms[i][j]);
-          console.log(transitions.born[transitions.born.length-1].pattern);
+          else transitions.born[l].pattern.push(terms[i][j]);
         }
         else if (terms[i][j] == '-') {
           dash = true;
         }
         else {
+          if (dash) {
+            transitions.born[l] = getNegation(transitions.born[l]);
+          }
           dash = false;
           last = terms[i][j];
           transitions.born.push({pattern: false, neighbors: terms[i][j] - '0'});
         }
+        if (dash && j == terms[l].length - 1) {
+          transitions.born[l] = getNegation(transitions.born[l]);
+        }
       }
       else if (tchar == 'S') {
+        const l = transitions.survive.length-1;
         if (terms[i][j] >= 'a' && terms[i][j] <= 'z') {
-          if (transitions.survive[transitions.surivive.length-1].pattern == false) {
-            transitions.survive[transitions.surivive.length-1].pattern = [dash ? "-" + terms[i][j] : terms[i][j]];
+          if (transitions.survive[l].pattern == false) {
+            transitions.survive[l].pattern = [terms[i][j]];
           }
-          else transitions.survive[transitions.surivive.length-1].pattern.push(dash ? "-" + terms[i][j] : terms[i][j]);
+          else transitions.survive[l].pattern.push(terms[i][j]);
         }
         else if (terms[i][j] == '-') {
           dash = true;
@@ -443,6 +476,10 @@ function toRuleObj(terms) {
           last = terms[i][j];  
           transitions.survive.push({pattern: false, neighbors: terms[i][j] - '0'});
         }
+        if (dash && j == terms[l].length - 1) {
+          transitions.born[l] = getNegation(transitions.born[l]);
+        }
+ 
       }
       else if (tchar == 'G') {
         transitions.generations = terms[i][j] - '0';
@@ -893,8 +930,8 @@ function useRuleGenPCHensel(cellGrid, rule) {
 
 function getCellClass(state) {
   const classes = [
-    "bg-black",
-    "bg-white",
+    "dark:bg-black bg-white",
+    "dark:bg-[#d6dbdc] bg-slate-800",
     "bg-red-600",
     "bg-yellow-400",
     "bg-green-500",
@@ -979,7 +1016,7 @@ const Page = () => {
   } 
 
 
-   if (init && !ran) {
+   if (init && valid && !ran) {
     setRan(true);
     Run(cellGrid,0,Date.now());   
   }
@@ -1006,7 +1043,7 @@ const Page = () => {
    return (
     (init && valid) ?
     <div>
-      <p className = "font-mono">{rulestr}</p>
+      <p className = "font-mono dark:text-[#d6dbdc] text-slate-800">{rulestr}</p>
       {valid && 
         <Grid
           cellGrid = {cellGrid}
