@@ -303,6 +303,49 @@ function isNumber(char) {
 }
 
 
+function getHenselOk(last) {
+  let ok = [];
+  if (last == '1' || last == '7') {
+    ok = ['c','e'];
+  }
+  else if (last == '2' || last == '6') {
+    ok = ['c','e','a','k','i','n'];
+  }
+  else if (last == '3' || last == '5') {
+    ok = ['c','e','a','k','i','n','y','q','j','r'];
+  }
+  else if (last == '4') {
+    ok = ['t','w','z'];
+  }
+  return ok; 
+}
+
+function randomNeighbors(isHensel) {
+  let out = "";
+  for (let i = '0'; i < '9'; i++) {
+    if (Math.random() > 0.7) {
+      out += i;
+      /*
+      if (isHensel && Math.random() > 0.5) {
+        let options = getHenselOk(last);
+        if (options.length > 3 
+      } 
+      */
+    }
+  }
+  return out;
+}
+
+function randomRule() {
+  let out = "/B" + randomNeighbors(false) + "/S" + randomNeighbors(false);
+  if (Math.random() > 0.7) {
+    out += "/G" + (Math.floor(Math.random() * 6) + 3);
+  }
+  console.log(out);
+  return out;
+}
+
+
 
 function validateTerm(term) {
   let good = {valid: true};
@@ -318,20 +361,8 @@ function validateTerm(term) {
       else if (term[i] >= 'a' && term[i] <= 'z') {
         dash = false
         letters = true;
-        let ok = [];
-        if (last == '1' || last == '7') {
-          ok = ['c','e'];
-        }
-        else if (last == '2' || last == '6') {
-          ok = ['c','e','a','k','i','n'];
-        }
-        else if (last == '3' || last == '5') {
-          ok = ['c','e','a','k','i','n','y','q','j','r'];
-        }
-        else if (last == '4') {
-          ok = ['t','w','z'];
-        }
-      	if (!ok.includes(term[i])) {
+        const ok = getHenselOk(last);
+       	if (!ok.includes(term[i])) {
         	console.log(ok, term[i]);
           return {valid: false, msg: term[i] + " is not a valid hensel notation symbol", index: [i,i+1]};
         }
@@ -1000,6 +1031,7 @@ const Grid = ({cellGrid}) => {
 };
 
 const StatusEnum = {
+  router: -1,
   uninit: 0,
   ready: 1,
   invalid: 2
@@ -1007,16 +1039,18 @@ const StatusEnum = {
 
 const NewPage = () => {
   const router = useRouter();
-  const [state, setState] = useState(StatusEnum.uninit);
+  const [state, setState] = useState(StatusEnum.router);
   const [string, setString] = useState("");
   const [cellGrid, setCellGrid] = useState(makeGridPC(102,102));
   const [rule, setRule] = useState({});
   const [error, setError] = useState({});
   const [paused, setPaused] = useState(false);
   const [saved, setSaved] = useState([]);
+  const [reroute, setReroute] = useState(false);
   const theme = "l";
   useEffect(() => {
-    if (router.isReady) {
+    if (router.isReady && state == StatusEnum.router) {
+      setState(StatusEnum.uninit);
       const terms = router.query.terms;
       const v = validateRule(terms);
       setString(toRuleString(terms));
@@ -1033,8 +1067,12 @@ const NewPage = () => {
     }
   }, [router.isReady]);
 
-  if (state == StatusEnum.ready && !paused) {
+  if (state == StatusEnum.ready && !paused && !reroute) {
     setTimeout(() => setCellGrid(useRuleGenPCHensel(cellGrid,rule)), 10);
+  }
+  else if (reroute != false && reroute != "wait") {
+    router.push(reroute).then((res) => router.reload());
+    setReroute("wait");
   }
   return (
     state != StatusEnum.uninit &&
@@ -1044,8 +1082,8 @@ const NewPage = () => {
         state == StatusEnum.ready 
         ? <div className = "flex">
             <Grid cellGrid = {cellGrid}/>
-            <div className = "h-32 space-y-4 grid grid-rows-2"> 
-              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => setPaused(!paused)}>
+            <div className = "h-32 space-y-4 grid"> 
+              <Button isIconOnly disableRipple = {true} radius = {"none"} disableAnimation = {true} onPressStart = {(e) => setPaused(!paused)}>
                 {paused 
                   ? <div className = "dark:bg-[url('../play.png')] bg-[url('../play_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
                   : <div className = "dark:bg-[url('../pause.png')] bg-[url('../pause_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
@@ -1056,6 +1094,10 @@ const NewPage = () => {
               <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => setCellGrid(randomizeGridPC(makeGridPC(102,102)))}>
                 <div className = "dark:bg-[url('../die.png')] bg-[url('../die_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
+               <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => setReroute(randomRule())}>
+                <div className = "dark:bg-[url('../new.png')] bg-[url('../new_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
+              </Button>
+ 
             </div>
           
           </div>
