@@ -3,8 +3,13 @@ import { useState, useEffect } from 'react';
 import { Button } from "@nextui-org/button";
 import Image from "next/image";
 import die from "../die.png";
+import dieLight from "../die_light.png";
 import run from "../play.png";
 import pause from "../pause.png";
+import pauseLight from "../pause_light.png";
+import runLight from "../play_light.png";
+import {useTheme} from "next-themes";
+
 const empty = {name: "0", map: [[0,0,0],[0,0],[0,0,0]]};
 
 const full = {name: "8", map: [[1,1,1],[1,1],[1,1,1]]}; 
@@ -566,7 +571,7 @@ function randomizeGrid(cellGrid) {
 }
 
 function randomizeGridPC(cellGrid) {
-  const r = (Math.random() / 2) + 0.25;
+  const r = (Math.random() * 0.7) + 0.1;
   for (let i = Math.floor(cellGrid.length/4); i < cellGrid.length * 3/4; i++) {
     for (let j = Math.floor(cellGrid[0].row.length/4); j < cellGrid[0].row.length * 3/4; j++) {
       cellGrid[i].row[j].state  = Math.random() < r ? 0 : 1;
@@ -1009,6 +1014,7 @@ const NewPage = () => {
   const [error, setError] = useState({});
   const [paused, setPaused] = useState(false);
   const [saved, setSaved] = useState([]);
+  const theme = "l";
   useEffect(() => {
     if (router.isReady) {
       const terms = router.query.terms;
@@ -1030,33 +1036,25 @@ const NewPage = () => {
   if (state == StatusEnum.ready && !paused) {
     setTimeout(() => setCellGrid(useRuleGenPCHensel(cellGrid,rule)), 10);
   }
-  
   return (
     state != StatusEnum.uninit &&
     <div>
-      <p className = "font-mono dark:text-[#d6dbdc] text-slate-800">{string}</p>
+      <p className = "font-mono font-bold dark:text-[#d6dbdc] text-slate-800">{string}</p>
       {
         state == StatusEnum.ready 
         ? <div className = "flex">
             <Grid cellGrid = {cellGrid}/>
-            <div className = "h-32 grid grid-rows-2"> 
+            <div className = "h-32 space-y-4 grid grid-rows-2"> 
               <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => setPaused(!paused)}>
-                <Image
-                  src = {paused ? run : pause}
-                  width = {70}
-                  height= {70}
-                  alt = {paused ? "Run" : "Pause"}
-                />
+                {paused 
+                  ? <div className = "dark:bg-[url('../play.png')] bg-[url('../play_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
+                  : <div className = "dark:bg-[url('../pause.png')] bg-[url('../pause_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
+                }
               </Button>
+            
             {/*<Button disableRipple = {true} radius = {"none"} onPressStart = {(e) => setCellGrid(makeGridPC(102,102))}>Clear</Button>*/}
-              <Button className = "bg-black" isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => setCellGrid(randomizeGridPC(makeGridPC(102,102)))}>
-                <Image
-                  className = "bg-black" 
-                  src = {die}
-                  width = {70}
-                  height = {70}
-                  alt = "Randomize"
-                />
+              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => setCellGrid(randomizeGridPC(makeGridPC(102,102)))}>
+                <div className = "dark:bg-[url('../die.png')] bg-[url('../die_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
             </div>
           
@@ -1067,7 +1065,7 @@ const NewPage = () => {
    );
 }
 
-
+/*
 const Page = () => {
   const router = useRouter();
   const [rulestr, setRulestr] = useState("");
@@ -1120,7 +1118,7 @@ const Page = () => {
    return (
     (init && valid) ?
     <div>
-      <p className = "font-mono dark:text-[#d6dbdc] text-slate-800">{rulestr}</p>
+      <p className = "font-mono dark:text-[#d6dbdc] text-red-400">{rulestr}</p>
       {valid && 
         <Grid
           cellGrid = {cellGrid}
@@ -1130,7 +1128,7 @@ const Page = () => {
     <p>{error.msg}</p>
   );
 }
-
+*/
 
 export default NewPage;
 
