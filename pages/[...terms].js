@@ -1,6 +1,10 @@
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
-
+import { Button } from "@nextui-org/button";
+import Image from "next/image";
+import die from "../die.png";
+import run from "../play.png";
+import pause from "../pause.png";
 const empty = {name: "0", map: [[0,0,0],[0,0],[0,0,0]]};
 
 const full = {name: "8", map: [[1,1,1],[1,1],[1,1,1]]}; 
@@ -562,9 +566,10 @@ function randomizeGrid(cellGrid) {
 }
 
 function randomizeGridPC(cellGrid) {
+  const r = (Math.random() / 2) + 0.25;
   for (let i = Math.floor(cellGrid.length/4); i < cellGrid.length * 3/4; i++) {
     for (let j = Math.floor(cellGrid[0].row.length/4); j < cellGrid[0].row.length * 3/4; j++) {
-      cellGrid[i].row[j].state  = Math.random() < 0.6 ? 0 : 1;
+      cellGrid[i].row[j].state  = Math.random() < r ? 0 : 1;
       if (cellGrid[i].row[j].state) {
         //if (cellGrid[i].minJ > j) cellGrid[i].minJ = j;
         //if (cellGrid[i].maxJ < j) cellGrid[i].maxJ = j;
@@ -989,6 +994,78 @@ const Grid = ({cellGrid}) => {
   );
 };
 
+const StatusEnum = {
+  uninit: 0,
+  ready: 1,
+  invalid: 2
+};
+
+const NewPage = () => {
+  const router = useRouter();
+  const [state, setState] = useState(StatusEnum.uninit);
+  const [string, setString] = useState("");
+  const [cellGrid, setCellGrid] = useState(makeGridPC(102,102));
+  const [rule, setRule] = useState({});
+  const [error, setError] = useState({});
+  const [paused, setPaused] = useState(false);
+  const [saved, setSaved] = useState([]);
+  useEffect(() => {
+    if (router.isReady) {
+      const terms = router.query.terms;
+      const v = validateRule(terms);
+      setString(toRuleString(terms));
+      if (v.valid) {
+        setRule(toRuleObj(terms));  
+        setCellGrid(randomizeGridPC(cellGrid));
+        setSaved(cellGrid);
+        setState(StatusEnum.ready);
+      } else {
+        setError(v);
+        setState(StatusEnum.invalid);
+      }
+       
+    }
+  }, [router.isReady]);
+
+  if (state == StatusEnum.ready && !paused) {
+    setTimeout(() => setCellGrid(useRuleGenPCHensel(cellGrid,rule)), 10);
+  }
+  
+  return (
+    state != StatusEnum.uninit &&
+    <div>
+      <p className = "font-mono dark:text-[#d6dbdc] text-slate-800">{string}</p>
+      {
+        state == StatusEnum.ready 
+        ? <div className = "flex">
+            <Grid cellGrid = {cellGrid}/>
+            <div className = "h-32 grid grid-rows-2"> 
+              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => setPaused(!paused)}>
+                <Image
+                  src = {paused ? run : pause}
+                  width = {70}
+                  height= {70}
+                  alt = {paused ? "Run" : "Pause"}
+                />
+              </Button>
+            {/*<Button disableRipple = {true} radius = {"none"} onPressStart = {(e) => setCellGrid(makeGridPC(102,102))}>Clear</Button>*/}
+              <Button className = "bg-black" isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => setCellGrid(randomizeGridPC(makeGridPC(102,102)))}>
+                <Image
+                  className = "bg-black" 
+                  src = {die}
+                  width = {70}
+                  height = {70}
+                  alt = "Randomize"
+                />
+              </Button>
+            </div>
+          
+          </div>
+        : <p>{error.msg}</p>
+      }
+    </div>
+   );
+}
 
 
 const Page = () => {
@@ -1055,5 +1132,5 @@ const Page = () => {
 }
 
 
-export default Page;
+export default NewPage;
 
