@@ -323,21 +323,42 @@ function getHenselOk(last) {
 function randomNeighbors(isHensel) {
   let out = "";
   for (let i = '0'; i < '9'; i++) {
-    if (Math.random() > 0.7) {
+    if (Math.random() > 0.6) {
       out += i;
-      /*
       if (isHensel && Math.random() > 0.5) {
-        let options = getHenselOk(last);
-        if (options.length > 3 
+        let options = getHenselOk(i);
+        if (options.length == 2) {
+          out += Math.random() > 0.5 ? options[0] : options[1];
+        }
+        else if (options.length) {
+          if (Math.random() > 0.3) {
+              out += '-';
+          }
+          if (options == 3) {
+            out += options[Math.floor(Math.random() * 3)];
+          }
+          else { 
+            let choose = Math.random() > 0.5 ? Math.floor(Math.random() * 2) + 1: Math.floor(Math.random() * (options.length/2 - 1)) + 1;
+            for (let n = 0; n < choose; n++) {
+              const index = Math.floor(Math.random() * options.length);
+              out += options[index];
+              if (!index) {
+                options = options.slice(1);
+              }
+              else {
+                options = options.slice(0, index).concat(options.slice(index + 1, options.length));
+              }
+            }
+          }
+        }
       } 
-      */
     }
   }
   return out;
 }
 
 function randomRule() {
-  let out = "/B" + randomNeighbors(false) + "/S" + randomNeighbors(false);
+  let out = "/B" + randomNeighbors(Math.random() > 0.5) + "/S" + randomNeighbors(Math.random() > 0.5);
   if (Math.random() > 0.5) {
     out += "/G" + (Math.floor(Math.random() * 6) + 3);
   }
@@ -516,6 +537,7 @@ function toRuleObj(terms) {
     generations: 2,
     pattern: false
   };
+  console.log("In terms", terms);
   for (let i = 0; i < terms.length; i++) {
     const tchar = terms[i][0];
     let last = ' ';
@@ -541,7 +563,7 @@ function toRuleObj(terms) {
           last = terms[i][j];
           transitions.born.push({pattern: false, neighbors: terms[i][j] - '0'});
         }
-        if (dash && j == terms[l].length - 1) {
+        if (dash && j == terms[i].length - 1) {
           transitions.born[l] = getNegation(transitions.born[l]);
         }
       }
@@ -557,12 +579,18 @@ function toRuleObj(terms) {
           dash = true;
         }
         else {
+          if (dash) {
+            console.log("here1");
+            transitions.survive[l] = getNegation(transitions.survive[l]);
+            console.log("fine");
+          }         
           dash = false;
           last = terms[i][j];  
           transitions.survive.push({pattern: false, neighbors: terms[i][j] - '0'});
         }
-        if (dash && j == terms[l].length - 1) {
-          transitions.born[l] = getNegation(transitions.born[l]);
+        if (dash && j == terms[i].length - 1) {
+          console.log("here2");
+          transitions.survive[l] = getNegation(transitions.survive[l]);
         }
  
       }
@@ -642,9 +670,9 @@ function addPattern(cellGrid, rle) {
       else {
         cellGrid[i].row[j].state = patternGrid[i - si][j - sj];
         if (cellGrid[i].row[j].state) {
-          if (!cellGrid[i].activejs.includes(j)) cellGrid[i].activejs.push(j);
+         // if (!cellGrid[i].activejs.includes(j)) cellGrid[i].activejs.push(j);
           for (let p = 0; p < moore.length; p++) {
-            if (!cellGrid[i].activejs.includes(j)) cellGrid[i + moore[p][0]].activejs.push(j + moore[p][1]);
+            //if (!cellGrid[i].activejs.includes(j)) cellGrid[i + moore[p][0]].activejs.push(j + moore[p][1]);
             cellGrid[i + moore[p][0]].row[j + moore[p][1]].neighbors += 1;
           }
         }
@@ -717,12 +745,12 @@ function randomizeGridPC(cellGrid) {
       if (cellGrid[i].row[j].state) {
         //if (cellGrid[i].minJ > j) cellGrid[i].minJ = j;
         //if (cellGrid[i].maxJ < j) cellGrid[i].maxJ = j;
-        cellGrid[i].activejs.push(j);
+        //cellGrid[i].activejs.push(j);
         for (let p = 0; p < moore.length; p++) {
           const jp = j + moore[p][1];
           const ip = i + moore[p][0];
           cellGrid[ip].row[jp].neighbors += 1;
-          if (!cellGrid[ip].activejs.includes(jp)) cellGrid[ip].activejs.push(jp);
+          //if (!cellGrid[ip].activejs.includes(jp)) cellGrid[ip].activejs.push(jp);
           //if (cellGrid[ip].minJ > jp && jp >= 1) cellGrid[ip].minJ = jp;
           //if (cellGrid[ip].maxJ < jp && jp < cellGrid[0].length - 1) cellGrid[ip].maxJ = jp;
          }
@@ -750,7 +778,7 @@ function updateNeighborsPC(cellGrid, i, j, mode) {
       let ip = i + moore[p][0];
       let jp = j + moore[p][1];
       if (!cellGrid[ip].row[jp].neighbors == 0){ 
-        cellGrid[ip].activejs.push(jp);
+        //cellGrid[ip].activejs.push(jp);
        // if (cellGrid[ip].minJ > jp) cellGrid[ip].minJ = jp;
        // if (cellGrid[ip].maxJ < jp) cellGrid[ip].maxJ = jp;
       }
@@ -1077,7 +1105,7 @@ function useRuleGenPCHensel(cellGrid, rule) {
 
 
 
-function getCellClass(state) {
+function getCellClass(state,lines) {
   const classes = [
     "dark:bg-black bg-white",
     "dark:bg-[#d6dbdc] bg-slate-800",
@@ -1089,12 +1117,12 @@ function getCellClass(state) {
     "bg-amber-600",
     "bg-lime-400"
   ];
-  return classes[state] + " h-2 w-2";
+  return classes[state] + (lines ? " h-2 w-2 border dark:border-slate-950" : " h-2 w-2");
 }
 
-const Cell = ({cell,func}) => {
+const Cell = ({cell,func,lines}) => {
  // <p className = {"text" + getCellClass((cell.state + 1) % 7).substring(2)}>{cell.neighbors}</p>
-  return (<div onClick = {func} className = {getCellClass(cell.state)}>
+  return (<div onClick = {func} className = {getCellClass(cell.state,lines)}>
     <></>
   </div>);
 }
@@ -1135,6 +1163,7 @@ const CellPacked = ({cell}) => {
   </div>
 */
 const Grid = ({cellGrid,func}) => {
+  const lines = false;
   const toChars = (row) => {
     return row.map((c) => {
       if (c == 0) return '_';
@@ -1144,18 +1173,11 @@ const Grid = ({cellGrid,func}) => {
   return (
   <div className="border-8 border-slate-500 w-fit">
    {cellGrid.slice(1,cellGrid.length-1).map((row) => 
-    row.activejs.length 
-    ? 
     <div className = "flex">
       {row.row.slice(1,row.row.length-1).map((cell) => 
-        <Cell cell = {cell} func = {func}/>
+        <Cell cell = {cell} func = {func} lines = {lines}/>
       )}
     </div>
-    :
-    <div className = "dark:bg-black bg-white h-2 w-[50rem]">
-      <></>
-    </div>
-      
     )}
   </div>
   );
@@ -1184,6 +1206,7 @@ const NewPage = () => {
   const theme = "l";
   useEffect(() => {
     if (router.isReady && state == StatusEnum.router) {
+      console.log("theme", window.localStorage.getItem('prefered-theme'));
       setState(StatusEnum.uninit);
       const terms = router.query.terms;
       const v = validateRule(terms);
@@ -1213,9 +1236,8 @@ const NewPage = () => {
     }, 15 - time);
     
   }
-  else if (reroute != false && reroute != "wait") {
+  else if (reroute != false) {
     router.push(reroute).then((res) => router.reload());
-    setReroute("wait");
   }
   return (
     state != StatusEnum.uninit &&
