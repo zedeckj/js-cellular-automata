@@ -1253,8 +1253,9 @@ const NewPage = () => {
     }, 15 - time);
     
   }
-  else if (reroute != false) {
+  else if (reroute != false && reroute != "wait") {
     router.push(reroute).then((res) => router.reload());
+    setReroute("wait");
   }
   const doReroute = (rule, pattern) => {
     if (pattern) {
