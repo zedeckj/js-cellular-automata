@@ -1176,7 +1176,7 @@ const Grid = ({cellGrid,func}) => {
     }).join('');
   };
   return (
-  <div className="border-8 border-slate-500 w-fit mr-2">
+  <div className="border-8 border-slate-500 w-fit mx-2">
    {cellGrid.slice(1,cellGrid.length-1).map((row) => 
     <div className = "flex">
       {row.row.slice(1,row.row.length-1).map((cell) => 
@@ -1266,7 +1266,7 @@ const NewPage = () => {
   return (
     state != StatusEnum.uninit &&
     <div>
-      <p className = "font-mono font-bold dark:text-[#d6dbdc] text-slate-800">{string}</p>
+      <p className = "font-mono font-bold text-lg ml-6 mt-1 dark:text-[#d6dbdc] text-slate-800">{string}</p>
       {
         state == StatusEnum.ready 
         ? <div className = "flex">
