@@ -32,10 +32,12 @@ const c4 = {name: "c4", map: [[1,0,1],
 const c5 = {name: "c5", map: [[0,1,0],
             [1,1],
             [1,1,0]]};
-const c6 = {name: "c6", map: [[0,1,0],
+const c6 = {name: "c6", map: 
+            [[0,1,0],
             [1,1],
             [1,1,1]]};
-const c7 = {name: "c7", map: [[0,1,1],
+const c7 = {name: "c7", map: 
+            [[0,1,1],
             [1,1],
             [1,1,1]]};
 
@@ -102,8 +104,9 @@ const a5 = {name: "a5", map: [[0,0,1],
             [0,1],
             [1,1,1]]};
 
-const a6 = {name: "a6", map: [[0,0,1],
-            [0,1],
+const a6 = {name: "a6", map: 
+            [[0,0,1],
+            [1,1],
             [1,1,1]]};
 
 const i2 = {name: "i2", map: [[0,1,0],
@@ -1062,9 +1065,11 @@ function useRuleGenPCHensel(cellGrid, rule) {
             newGrid = updateNeighborsPC(newGrid,i,j,dieMode);
           }
           else if (data.pattern) {
+            //let nei = [];
             let patterns = allhensel;
             for (let p = 0; p < moore.length; p++) {
               patterns = getMatching(patterns,moore[p][0], moore[p][1], cellGrid[i+moore[p][0]].row[j+moore[p][1]].state); 
+              //nei.push({patterns, i: moore[p][0], j: moore[p][1], state: cellGrid[i+moore[p][0]].row[j+moore[p][1]].state});
             }
             if (!data.pattern.includes(patterns[0].name[0])) {
               newGrid = updateNeighborsPC(newGrid,i,j,dieMode);
@@ -1076,19 +1081,19 @@ function useRuleGenPCHensel(cellGrid, rule) {
           if (data) {
             if (data.pattern) {
               let patterns = allhensel;
-              let nei = [];
+              //let nei = [];
               for (let p = 0; p < moore.length; p++) {
                 patterns = getMatching(patterns, moore[p][0], moore[p][1], cellGrid[i+moore[p][0]].row[j+moore[p][1]].state); 
-                nei.push({patterns, i: moore[p][0], j: moore[p][1], state: cellGrid[i+moore[p][0]].row[j+moore[p][1]].state});
+                //nei.push({patterns, i: moore[p][0], j: moore[p][1], state: cellGrid[i+moore[p][0]].row[j+moore[p][1]].state});
                 //nei.push(patterns); 
               }
-              try {
+              //try {
                 if (data.pattern.includes(patterns[0].name[0])) {
                   newGrid = updateNeighborsPC(newGrid,i,j,1);
                 }
-              } catch (e) {
-                console.log("ERROR", nei);
-              }
+              //} catch (e) {
+              //  console.log("ERROR", nei);
+              //}
             }
             else newGrid = updateNeighborsPC(newGrid,i,j,1);
           }
@@ -1190,6 +1195,12 @@ const StatusEnum = {
   invalid: 2
 };
 
+const FrameEnum = {
+  normal: 0,
+  load: 1,
+  rand: 2
+}
+
 const NewPage = () => {
   const router = useRouter();
   const [state, setState] = useState(StatusEnum.router);
@@ -1197,8 +1208,9 @@ const NewPage = () => {
   const [cellGrid, setCellGrid] = useState(makeGridPC(102,102));
   const [rule, setRule] = useState({});
   const [error, setError] = useState({});
-  const [paused, setPaused] = useState(true);
+  const [paused, setPaused] = useState(false);
   const [saved, setSaved] = useState([]);
+  const [frameMode, setFrameMode] = useState(FrameEnum.normal);
   const [reroute, setReroute] = useState(false);
   const [foo, setFoo] = useState(false);
   const [pattern, setPattern] = useState(false);
@@ -1229,16 +1241,26 @@ const NewPage = () => {
 
   if (state == StatusEnum.ready && !paused && !reroute) {
     setTimeout(() => {
-      const first = Date.now();
-      setCellGrid(useRuleGenPCHensel(cellGrid,rule));
+      let first = Date.now();
+      if (frameMode == FrameEnum.normal) setCellGrid(useRuleGenPCHensel(cellGrid,rule));
+      else {
+        if (frameMode == FrameEnum.rand) setCellGrid(randomizeGridPC(makeGridPC(102,102)));
+        else setCellGrid(saved);
+        setFrameMode(FrameEnum.normal);
+      }
       time = Date.now() - first;
-      if (time > 15) time = 10;
+      if (time > 15) time = 15;
     }, 15 - time);
     
   }
   else if (reroute != false) {
     router.push(reroute).then((res) => router.reload());
   }
+  const doReroute = (rule, pattern) => {
+    if (pattern) {
+      setReroute(rule + "/P" + pattern);
+    } else setReroute(rule); 
+  };
   return (
     state != StatusEnum.uninit &&
     <div>
@@ -1256,13 +1278,13 @@ const NewPage = () => {
               </Button>
             
             {/*<Button disableRipple = {true} radius = {"none"} onPressStart = {(e) => setCellGrid(makeGridPC(102,102))}>Clear</Button>*/}
-              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => setCellGrid(randomizeGridPC(makeGridPC(102,102)))}>
+              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {if (paused) setCellGrid(randomizeGridPC(makeGridPC(102,102))); else setFrameMode(FrameEnum.rand);}}>
                 <div className = "dark:bg-[url('../die.png')] bg-[url('../die_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
-              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => setCellGrid(saved)}>
+              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {if (paused) setCellGrid(saved); else setFrameMode(FrameEnum.load);}}>
                 <div className = "dark:bg-[url('../reset.png')] bg-[url('../reset_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
-              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => setReroute(randomRule())}>
+              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => doReroute(randomRule(),rule.pattern)}>
                 <div className = "dark:bg-[url('../new.png')] bg-[url('../new_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
            </div>
