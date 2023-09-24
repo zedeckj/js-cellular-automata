@@ -1237,13 +1237,13 @@ const NewPage = () => {
               <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => setCellGrid(randomizeGridPC(makeGridPC(102,102)))}>
                 <div className = "dark:bg-[url('../die.png')] bg-[url('../die_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
+              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => setCellGrid(saved)}>
+                <div className = "dark:bg-[url('../reset.png')] bg-[url('../reset_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
+              </Button>
               <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => setReroute(randomRule())}>
                 <div className = "dark:bg-[url('../new.png')] bg-[url('../new_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
-               <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => setCellGrid(saved)}>
-                <div className = "dark:bg-[url('../reset.png')] bg-[url('../reset_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
-              </Button>
-            </div>
+           </div>
           
           </div>
         : <p>{error.msg}</p>
