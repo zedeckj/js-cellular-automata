@@ -347,6 +347,43 @@ function randomRule() {
 
 
 
+function validatePattern(rle) {
+  let width = 0;
+  let height = 0;
+  let col = 0;
+  let row = 0;
+  let count = 0;
+  let patternGrid = [[]];
+  for (let i = 0; i < rle.length && rle[i] != '!'; i++) {
+    if (rle[i] == '$') {
+      col = 0;
+      row++;
+      count = 0;
+      patternGrid.push([]);
+    }
+    else if ((count == 0 && rle[i] >= '2' && rle[i] <= '9') || (rle[i] >= '0' && rle[i] <= '9')){
+      count = count * 10 + (rle[i] - '0');
+    }
+    else if (rle[i] == 'b' || rle[i] == 'o'){
+      const state = rle[i] == 'b' ? 0 : 1;
+      const amount = count ? count : 1;
+      for (let a = col; a < col + amount; a++) {
+        patternGrid[row][a] = state;
+      }
+      col += count ? count : 1;
+      count = 0;
+    }
+    else {
+      return false;
+    }
+    if (row > height) height = row;
+    if (col > width) width = col;
+  }
+  return true;
+}
+
+
+
 function validateTerm(term) {
   let good = {valid: true};
   let dash = false;
@@ -387,6 +424,13 @@ function validateTerm(term) {
     }
     else return good;
   }
+  else if (term[0] == 'P') {
+    if (validatePattern(term.substring(1))) {
+      return good;
+    }
+    else return {valid: false, msg: "Invalid RLE pattern", index: [1, term.length]};
+  }
+
 }
 
 /*
@@ -436,7 +480,7 @@ function toRuleString(terms) {
   if (terms.length == 0) return "";
   let str = terms[0];
   for (let i = 1; i < terms.length; i++) {
-    str = str + "/" + terms[i];
+    if (terms[i][0] != 'P') str = str + "/" + terms[i];
   }
   return str;
 }
@@ -469,7 +513,8 @@ function toRuleObj(terms) {
   let transitions = {
     born: [],
     survive: [],
-    generations: 2
+    generations: 2,
+    pattern: false
   };
   for (let i = 0; i < terms.length; i++) {
     const tchar = terms[i][0];
@@ -524,6 +569,9 @@ function toRuleObj(terms) {
       else if (tchar == 'G') {
         transitions.generations = terms[i][j] - '0';
       }
+      else if (tchar == 'P') {
+        transitions.pattern = terms[i].substring(1); 
+      }
     }
   }
   console.log("rule",transitions);
@@ -547,6 +595,66 @@ function makeGridPC(length, height) {
   }
   return cellGrid;
 }
+
+function addPattern(cellGrid, rle) {
+  let width = 0;
+  let height = 0;
+  let col = 0;
+  let row = 0;
+  let count = 0;
+  let patternGrid = [[]];
+  for (let i = 0; i < rle.length && rle[i] != '!'; i++) {
+    if (rle[i] == '$') {
+      col = 0;
+      row++;
+      count = 0;
+      patternGrid.push([]);
+    }
+    else if ((count == 0 && rle[i] >= '2' && rle[i] <= '9') || (rle[i] >= '0' && rle[i] <= '9')){
+      count = count * 10 + (rle[i] - '0');
+    }
+    else if (rle[i] == 'b' || rle[i] == 'o'){
+      const state = rle[i] == 'b' ? 0 : 1;
+      const amount = count ? count : 1;
+      for (let a = col; a < col + amount; a++) {
+        patternGrid[row][a] = state;
+      }
+      col += count ? count : 1;
+      count = 0;
+    }
+    else {
+      console.log(rle, i, rle[i]);
+      return null;
+    }
+    if (row > height) height = row;
+    if (col > width) width = col;
+  }
+  height++;
+  const hwidth = Math.floor(width/2);
+  const hheight = Math.floor(height/2);
+  const si = Math.floor(cellGrid.length/2) - hheight;
+  const sj = Math.floor(cellGrid[0].row.length/2) - hwidth;
+  
+  console.log(patternGrid, height, width);
+  for (let i = si; i < si + height; i++) {
+    for (let j = sj; j < sj + width; j++) {
+      if (j - sj > patternGrid[i - si].length - 1) cellGrid[i].row[j].state = 0;
+      else {
+        cellGrid[i].row[j].state = patternGrid[i - si][j - sj];
+        if (cellGrid[i].row[j].state) {
+          if (!cellGrid[i].activejs.includes(j)) cellGrid[i].activejs.push(j);
+          for (let p = 0; p < moore.length; p++) {
+            if (!cellGrid[i].activejs.includes(j)) cellGrid[i + moore[p][0]].activejs.push(j + moore[p][1]);
+            cellGrid[i + moore[p][0]].row[j + moore[p][1]].neighbors += 1;
+          }
+        }
+     } 
+    }
+  }
+  console.log("pattern out", cellGrid);
+  return cellGrid;
+}
+
 
 function makeGridBit(length, height) {
   const cellGrid = Array.from({length: height});
@@ -1067,10 +1175,11 @@ const NewPage = () => {
   const [cellGrid, setCellGrid] = useState(makeGridPC(102,102));
   const [rule, setRule] = useState({});
   const [error, setError] = useState({});
-  const [paused, setPaused] = useState(false);
+  const [paused, setPaused] = useState(true);
   const [saved, setSaved] = useState([]);
   const [reroute, setReroute] = useState(false);
   const [foo, setFoo] = useState(false);
+  const [pattern, setPattern] = useState(false);
   let time = 0;
   const theme = "l";
   useEffect(() => {
@@ -1080,9 +1189,11 @@ const NewPage = () => {
       const v = validateRule(terms);
       setString(toRuleString(terms));
       if (v.valid) {
-        setRule(toRuleObj(terms));  
-        setCellGrid(randomizeGridPC(cellGrid));
-        setSaved(cellGrid);
+        const ruleObj = toRuleObj(terms);
+        setRule(ruleObj);  
+        setCellGrid();
+        if (!ruleObj.pattern) setCellGrid(randomizeGridPC(cellGrid));
+        else setCellGrid(addPattern(cellGrid,ruleObj.pattern));
         setState(StatusEnum.ready);
       } else {
         setError(v);
@@ -1098,7 +1209,6 @@ const NewPage = () => {
       setCellGrid(useRuleGenPCHensel(cellGrid,rule));
       time = Date.now() - first;
       if (time > 15) time = 10;
-      console.log(time);
     }, 15 - time);
     
   }
@@ -1134,11 +1244,6 @@ const NewPage = () => {
           
           </div>
         : <p>{error.msg}</p>
-      }
-      {
-        foo 
-        ? <p>Foo!</p>
-        : <p>Bar!</p>
       }
     </div>
    );
