@@ -1192,8 +1192,9 @@ const NewPage = () => {
         const ruleObj = toRuleObj(terms);
         setRule(ruleObj);  
         setCellGrid();
-        if (!ruleObj.pattern) setCellGrid(randomizeGridPC(cellGrid));
-        else setCellGrid(addPattern(cellGrid,ruleObj.pattern));
+        const initial = !ruleObj.pattern ? randomizeGridPC(cellGrid) : addPattern(cellGrid,ruleObj.pattern);
+        setCellGrid(initial);
+        setSaved(initial);
         setState(StatusEnum.ready);
       } else {
         setError(v);
@@ -1239,7 +1240,9 @@ const NewPage = () => {
               <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => setReroute(randomRule())}>
                 <div className = "dark:bg-[url('../new.png')] bg-[url('../new_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
- 
+               <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => setCellGrid(saved)}>
+                <div className = "dark:bg-[url('../reset.png')] bg-[url('../reset_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
+              </Button>
             </div>
           
           </div>
