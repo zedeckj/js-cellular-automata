@@ -1176,7 +1176,7 @@ const Grid = ({cellGrid,func}) => {
     }).join('');
   };
   return (
-  <div className="border-8 border-slate-500 w-fit">
+  <div className="border-8 border-slate-500 w-fit mr-2">
    {cellGrid.slice(1,cellGrid.length-1).map((row) => 
     <div className = "flex">
       {row.row.slice(1,row.row.length-1).map((cell) => 
