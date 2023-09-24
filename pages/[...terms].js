@@ -1214,8 +1214,9 @@ const NewPage = () => {
   const [reroute, setReroute] = useState(false);
   const [foo, setFoo] = useState(false);
   const [pattern, setPattern] = useState(false);
+  const { systemTheme, theme, setTheme } = useTheme();
+  const currentTheme = theme === 'system' ? systemTheme : theme;
   let time = 0;
-  const theme = "l";
   useEffect(() => {
     if (router.isReady && state == StatusEnum.router) {
       console.log("theme", window.localStorage.getItem('prefered-theme'));
@@ -1288,6 +1289,9 @@ const NewPage = () => {
               <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => doReroute(randomRule(),rule.pattern)}>
                 <div className = "dark:bg-[url('../new.png')] bg-[url('../new_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
+               <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {theme == "dark" ? setTheme("light") : setTheme("dark")}}>
+                <div className = "dark:bg-[url('../light.png')] bg-[url('../dark.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
+              </Button>             
            </div>
           
           </div>
