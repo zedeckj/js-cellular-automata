@@ -338,7 +338,7 @@ function randomNeighbors(isHensel) {
 
 function randomRule() {
   let out = "/B" + randomNeighbors(false) + "/S" + randomNeighbors(false);
-  if (Math.random() > 0.7) {
+  if (Math.random() > 0.5) {
     out += "/G" + (Math.floor(Math.random() * 6) + 3);
   }
   console.log(out);
@@ -364,7 +364,7 @@ function validateTerm(term) {
         const ok = getHenselOk(last);
        	if (!ok.includes(term[i])) {
         	console.log(ok, term[i]);
-          return {valid: false, msg: term[i] + " is not a valid hensel notation symbol", index: [i,i+1]};
+          return {valid: false, msg: last + term[i] + " is not a valid hensel notation term", index: [i,i+1]};
         }
       }
       else if (!isNumber(term[i]) || last >= term[i] || dash) {
@@ -562,7 +562,7 @@ function makeGridBit(length, height) {
 function copyGridPC(cellGrid) {
   const newGrid = Array.from({length: cellGrid.length});
   for (let i = 0; i < newGrid.length; i++) {
-    newGrid[i] = {activejs: [], row: Array.from({length: cellGrid[0].row.length}), minJ: cellGrid[i].minJ, maxJ: cellGrid[i].maxJ};
+    newGrid[i] = {activejs: cellGrid[i].activejs, row: Array.from({length: cellGrid[0].row.length}), minJ: cellGrid[i].minJ, maxJ: cellGrid[i].maxJ};
     for (let j = 0; j < newGrid[0].row.length; j++) {
       newGrid[i].row[j] = {state: cellGrid[i].row[j].state, neighbors: cellGrid[i].row[j].neighbors};
     }
@@ -984,9 +984,9 @@ function getCellClass(state) {
   return classes[state] + " h-2 w-2";
 }
 
-const Cell = ({cell}) => {
+const Cell = ({cell,func}) => {
  // <p className = {"text" + getCellClass((cell.state + 1) % 7).substring(2)}>{cell.neighbors}</p>
-  return (<div className = {getCellClass(cell.state)}>
+  return (<div onClick = {func} className = {getCellClass(cell.state)}>
     <></>
   </div>);
 }
@@ -1008,9 +1008,25 @@ const CellPacked = ({cell}) => {
     </div>
   );
 }
+/*
+  <div className="border-8 border-slate-500 w-fit">
+   {cellGrid.slice(1,cellGrid.length-1).map((row) => 
+    {true ?
+      <div className = "flex">
+        {row.row.slice(1,row.row.length-1).map((cell) => 
+          <Cell cell = {cell} func = {func}/>
+        )}
+      </div> :
+      <div className = "dark:bg-black bg-white h-2 w-[50rem]">
+        <></>
+      </div>
+      
+    }
 
-
-const Grid = ({cellGrid}) => {
+    )}
+  </div>
+*/
+const Grid = ({cellGrid,func}) => {
   const toChars = (row) => {
     return row.map((c) => {
       if (c == 0) return '_';
@@ -1020,11 +1036,18 @@ const Grid = ({cellGrid}) => {
   return (
   <div className="border-8 border-slate-500 w-fit">
    {cellGrid.slice(1,cellGrid.length-1).map((row) => 
+    row.activejs.length 
+    ? 
     <div className = "flex">
       {row.row.slice(1,row.row.length-1).map((cell) => 
-        <Cell cell = {cell}/>
+        <Cell cell = {cell} func = {func}/>
       )}
     </div>
+    :
+    <div className = "dark:bg-black bg-white h-2 w-[50rem]">
+      <></>
+    </div>
+      
     )}
   </div>
   );
@@ -1047,6 +1070,8 @@ const NewPage = () => {
   const [paused, setPaused] = useState(false);
   const [saved, setSaved] = useState([]);
   const [reroute, setReroute] = useState(false);
+  const [foo, setFoo] = useState(false);
+  let time = 0;
   const theme = "l";
   useEffect(() => {
     if (router.isReady && state == StatusEnum.router) {
@@ -1068,7 +1093,14 @@ const NewPage = () => {
   }, [router.isReady]);
 
   if (state == StatusEnum.ready && !paused && !reroute) {
-    setTimeout(() => setCellGrid(useRuleGenPCHensel(cellGrid,rule)), 10);
+    setTimeout(() => {
+      const first = Date.now();
+      setCellGrid(useRuleGenPCHensel(cellGrid,rule));
+      time = Date.now() - first;
+      if (time > 15) time = 10;
+      console.log(time);
+    }, 15 - time);
+    
   }
   else if (reroute != false && reroute != "wait") {
     router.push(reroute).then((res) => router.reload());
@@ -1081,7 +1113,7 @@ const NewPage = () => {
       {
         state == StatusEnum.ready 
         ? <div className = "flex">
-            <Grid cellGrid = {cellGrid}/>
+            <Grid cellGrid = {cellGrid} func = {() => setFoo(!foo)}/>
             <div className = "h-32 space-y-4 grid"> 
               <Button isIconOnly disableRipple = {true} radius = {"none"} disableAnimation = {true} onPressStart = {(e) => setPaused(!paused)}>
                 {paused 
@@ -1094,7 +1126,7 @@ const NewPage = () => {
               <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => setCellGrid(randomizeGridPC(makeGridPC(102,102)))}>
                 <div className = "dark:bg-[url('../die.png')] bg-[url('../die_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
-               <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => setReroute(randomRule())}>
+              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => setReroute(randomRule())}>
                 <div className = "dark:bg-[url('../new.png')] bg-[url('../new_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
  
@@ -1102,6 +1134,11 @@ const NewPage = () => {
           
           </div>
         : <p>{error.msg}</p>
+      }
+      {
+        foo 
+        ? <p>Foo!</p>
+        : <p>Bar!</p>
       }
     </div>
    );
