@@ -621,7 +621,7 @@ function makeGridPC(length, height) {
   for (let i = 0; i < height; i++) {
     cellGrid[i] = {activejs: [], row: Array.from({length}), minJ: length, maxJ: 0};
     for (let j = 0; j < length; j++) {
-      cellGrid[i].row[j] = {state: 0, neighbors: 0};
+      cellGrid[i].row[j] = {state: 0, neighbors: 0, i, j};
     }
   }
   return cellGrid;
@@ -740,7 +740,7 @@ function copyGridPC(cellGrid) {
   for (let i = 0; i < newGrid.length; i++) {
     newGrid[i] = {activejs: cellGrid[i].activejs, row: Array.from({length: cellGrid[0].row.length}), minJ: cellGrid[i].minJ, maxJ: cellGrid[i].maxJ};
     for (let j = 0; j < newGrid[0].row.length; j++) {
-      newGrid[i].row[j] = {state: cellGrid[i].row[j].state, neighbors: cellGrid[i].row[j].neighbors};
+      newGrid[i].row[j] = {state: cellGrid[i].row[j].state, neighbors: cellGrid[i].row[j].neighbors, i, j};
     }
   }
   return newGrid;
@@ -779,6 +779,26 @@ function randomizeGrid(cellGrid) {
 
 function rangeRandom(min,max) {
   return ((Math.random() * (max - min)) + min);
+}
+
+function toggleCell(cellGrid, i, j) {
+  const state = cellGrid[i].row[j].state;
+  if (state == 0) {
+    cellGrid[i].row[j].state = 1;
+    for (let p = 0; p < moore.length; p++) {
+      cellGrid[i + moore[p][0]].row[j + moore[p][1]].neighbors += 1;
+    }
+  }
+  else if (state == 1) {
+    cellGrid[i].row[j].state = 0;
+    for (let p = 0; p < moore.length; p++) {
+      cellGrid[i + moore[p][0]].row[j + moore[p][1]].neighbors -= 1;
+    }
+  }
+  else {
+    cellGrid[i].row[j].state = 0;
+  }
+  return cellGrid;
 }
 
 
@@ -1209,7 +1229,7 @@ function getCellClass(state,lines) {
 
 const Cell = ({cell,func,lines}) => {
  // <p className = {"text" + getCellClass((cell.state + 1) % 7).substring(2)}>{cell.neighbors}</p>
-  return (<div onClick = {func} className = {getCellClass(cell.state,lines)}>
+  return (<div onClick = {() => func(cell.i, cell.j)} className = {getCellClass(cell.state,lines)}>
     <></>
   </div>);
 }
@@ -1280,7 +1300,8 @@ const StatusEnum = {
 const FrameEnum = {
   normal: 0,
   load: 1,
-  rand: 2
+  rand: 2,
+  clear: 3
 }
 
 const NewPage = () => {
@@ -1328,7 +1349,8 @@ const NewPage = () => {
       if (frameMode == FrameEnum.normal) setCellGrid(useRuleGenPCHensel(cellGrid,rule));
       else {
         if (frameMode == FrameEnum.rand) setCellGrid(randomizeGridPC(makeGridPC(102,102)));
-        else setCellGrid(saved);
+        else if (frameMode == FrameEnum.clear) setCellGrid(makeGridPC(102,102));
+        else setCellGrid(copyGridPC(saved));
         setFrameMode(FrameEnum.normal);
       }
       time = Date.now() - first;
@@ -1340,11 +1362,23 @@ const NewPage = () => {
     router.push(reroute).then((res) => router.reload());
     setReroute("wait");
   }
+  
   const doReroute = (rule, pattern) => {
     if (pattern) {
       setReroute(rule + "/P" + pattern);
     } else setReroute(rule); 
   };
+
+  const clickBehavior = (i, j) => {
+    if (!paused) {
+      setPaused(true);
+    } 
+    else {
+      setCellGrid(toggleCell(cellGrid,i,j));
+      setFoo(!foo);
+    }
+  }  
+
   return (
     state != StatusEnum.uninit &&
     <div>
@@ -1352,7 +1386,7 @@ const NewPage = () => {
       {
         state == StatusEnum.ready 
         ? <div className = "flex">
-            <Grid cellGrid = {cellGrid} func = {() => setFoo(!foo)}/>
+            <Grid cellGrid = {cellGrid} func = {(i,j) => clickBehavior(i,j)}/>
             <div className = "h-32 space-y-4 grid"> 
               <Button isIconOnly disableRipple = {true} radius = {"none"} disableAnimation = {true} onPressStart = {(e) => setPaused(!paused)}>
                 {paused 
@@ -1365,7 +1399,10 @@ const NewPage = () => {
               <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {if (paused) setCellGrid(randomizeGridPC(makeGridPC(102,102))); else setFrameMode(FrameEnum.rand);}}>
                 <div className = "dark:bg-[url('../die.png')] bg-[url('../die_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
-              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {if (paused) setCellGrid(saved); else setFrameMode(FrameEnum.load);}}>
+              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {if (paused) setCellGrid(makeGridPC(102,102)); else setFrameMode(FrameEnum.clear);}}>
+                <div className = "dark:bg-[url('../delete.png')] bg-[url('../delete_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
+              </Button>
+              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {if (paused) {setCellGrid(copyGridPC(saved)); setFoo(!foo);} else setFrameMode(FrameEnum.load);}}>
                 <div className = "dark:bg-[url('../reset.png')] bg-[url('../reset_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
               <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => doReroute("/" + string, gridToRLE(cellGrid))}>
