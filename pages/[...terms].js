@@ -650,6 +650,15 @@ function makeGrid(length, height) {
 
 }
 
+function clearGrid(cellGrid) {
+  for (let i = 0; i < cellGrid.length; i++) {
+    for (let j = 0; j < cellGrid[0].row.length; j++) {
+      cellGrid[i].row[j].state = 0;
+      cellGrid[i].row[j].neighbors = 0;
+    }
+  }
+}
+
 function makeGridPC(length, height) {
   const cellGrid = Array.from({length: height});
   for (let i = 0; i < height; i++) {
@@ -767,6 +776,16 @@ function makeGridBit(length, height) {
     }
   }
   return cellGrid;
+}
+
+
+function loadGridPC(dstGrid,srcGrid) {
+  for (let i = 0; i < dstGrid.length; i++) {
+    for (let j = 0; j < dstGrid[0].row.length; j++) {
+      dstGrid[j].row[i].state = srcGrid[j].row[i].state;
+      dstGrid[j].row[i].neighbors = srcGrid[j].row[i].neighbors;
+    }
+  }
 }
 
 function copyGridPC(cellGrid) {
@@ -1435,13 +1454,13 @@ const NewPage = () => {
               </Button>
             
             {/*<Button disableRipple = {true} radius = {"none"} onPressStart = {(e) => setCellGrid(makeGridPC(102,102))}>Clear</Button>*/}
-              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => setCellGrid(randomizeGridPC(makeGridPC(102,102)))}>
+              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {clearGrid(cellGrid); randomizeGridPC(cellGrid); setFoo(!foo)}}>
                 <div className = "dark:bg-[url('../die.png')] bg-[url('../die_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
-              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => setCellGrid(makeGridPC(102,102))}>
+              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {clearGrid(cellGrid); setFoo(!foo);}}>
                 <div className = "dark:bg-[url('../delete.png')] bg-[url('../delete_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
-              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => setCellGrid(copyGridPC(saved))}>
+              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {loadGridPC(cellGrid,saved); setFoo(!foo)}}>
                 <div className = "dark:bg-[url('../reset.png')] bg-[url('../reset_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
               <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => doReroute("/" + string, gridToRLE(cellGrid))}>
