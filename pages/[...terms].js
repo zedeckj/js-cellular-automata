@@ -1344,6 +1344,7 @@ const NewPage = () => {
   }, [router.isReady]);
 
   if (state == StatusEnum.ready && !paused && !reroute) {
+    const buff = 40;
     setTimeout(() => {
       let first = Date.now();
       if (frameMode == FrameEnum.normal) setCellGrid(useRuleGenPCHensel(cellGrid,rule));
@@ -1354,8 +1355,8 @@ const NewPage = () => {
         setFrameMode(FrameEnum.normal);
       }
       time = Date.now() - first;
-      if (time > 15) time = 15;
-    }, 15 - time);
+      if (time > 40) time = 40;
+    }, 40 - time);
     
   }
   else if (reroute != false && reroute != "wait") {
