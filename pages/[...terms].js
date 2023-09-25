@@ -479,7 +479,11 @@ function validateTerm(term) {
 }
 */
 function validateRule(terms) {
-  
+  if (terms[0][0] == "R") {
+    if (terms.length == 1 || (terms.length == 2 && terms[1][0] == "P")) {
+          
+    }
+  }  
   for (let i = 0; i < terms.length; i++) {
     const tv = validateTerm(terms[i]);
     if (!tv.valid) {
@@ -1344,7 +1348,7 @@ const NewPage = () => {
   }, [router.isReady]);
 
   if (state == StatusEnum.ready && !paused && !reroute) {
-    const buff = 40;
+    const buff = 100;
     setTimeout(() => {
       let first = Date.now();
       if (frameMode == FrameEnum.normal) setCellGrid(useRuleGenPCHensel(cellGrid,rule));
@@ -1355,8 +1359,8 @@ const NewPage = () => {
         setFrameMode(FrameEnum.normal);
       }
       time = Date.now() - first;
-      if (time > 40) time = 40;
-    }, 40 - time);
+      if (time > buff) time = buff;
+    }, buff - time);
     
   }
   else if (reroute != false && reroute != "wait") {
