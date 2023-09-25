@@ -1453,13 +1453,16 @@ const NewPage = () => {
               </Button>
             
             {/*<Button disableRipple = {true} radius = {"none"} onPressStart = {(e) => setCellGrid(makeGridPC(102,102))}>Clear</Button>*/}
-              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {clearGrid(loadGrid); randomizeGridPC(loadGrid); setFrameMode(FrameEnum.load);}}>
+              <Button isIconOnly disableRipple = {true} radius = {"none"} 
+                      isDisabled = {frameMode == FrameEnum.load} onPressStart = {(e) => {clearGrid(loadGrid); randomizeGridPC(loadGrid); setFrameMode(FrameEnum.load);}}>
                 <div className = "dark:bg-[url('../die.png')] bg-[url('../die_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
-              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {clearGrid(loadGrid); setFrameMode(FrameEnum.load);}}>
+              <Button isIconOnly disableRipple = {true} radius = {"none"} 
+                isDisabled = {frameMode == FrameEnum.load} onPressStart = {(e) => {clearGrid(loadGrid); setFrameMode(FrameEnum.load);}}>
                 <div className = "dark:bg-[url('../delete.png')] bg-[url('../delete_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
-              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {loadGridPC(loadGrid,saved); setFrameMode(FrameEnum.load);}}>
+              <Button isIconOnly disableRipple = {true} radius = {"none"} 
+                isDisabled = {frameMode == FrameEnum.load} onPressStart = {(e) => {loadGridPC(loadGrid,saved); setFrameMode(FrameEnum.load);}}>
                 <div className = "dark:bg-[url('../reset.png')] bg-[url('../reset_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
               <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => doReroute("/" + string, gridToRLE(cellGrid))}>
