@@ -627,6 +627,43 @@ function makeGridPC(length, height) {
   return cellGrid;
 }
 
+function gridToRLE(cellGrid) {
+  let out = "";
+  for (let i = 0; i < cellGrid.length; i++) {
+    let last = -1;
+    let count = 0;
+    for (let j = 0; j < cellGrid[0].row.length; j++) {
+      const cur = cellGrid[i].row[j].state;
+      if (cur == last) {
+        count += 1;
+      }
+      if (cur != last || j == cellGrid[0].row.length - 1) {
+        if (last != -1) {
+          if (count != 1) {
+            out += count.toString();
+          }
+          out += last == 1 ? "o" : "b";
+        }
+        last = cur;
+        count = 1;
+      }
+    }
+    out += "$";
+  }
+  const widthStr = cellGrid[0].row.length.toString();
+  const rl = widthStr.length + 2;
+  const emp = widthStr + "b$";
+  console.log("Foo");
+  console.log("sub1", out.substring(0,rl));
+  console.log("sub2", out.substring(out.length - rl, out.length));
+  while (out.substring(0,rl) == emp && out.substring(out.length - rl, out.length) == emp) {
+    const temp = out.substring(rl,out.length);
+    out = temp.substring(0, temp.length - rl);
+  }
+  out = out.substring(0,out.length - 1) + "!";
+  return out;
+}
+
 function addPattern(cellGrid, rle) {
   let width = 0;
   let height = 0;
@@ -735,6 +772,51 @@ function randomizeGrid(cellGrid) {
   for (let i = cellGrid.length/4; i < cellGrid.length * 3/4; i++) {
     for (let j = cellGrid[0].length/4; j < cellGrid[0].length * 3/4; j++) {
       cellGrid[i].row[j]  = Math.random() < 0.6 ? 0 : 1;
+    }
+  }
+  return cellGrid;
+}
+
+function rangeRandom(min,max) {
+  return ((Math.random() * (max - min)) + min);
+}
+
+
+function improvedRandomize(cellGrid) {
+  const tr = rangeRandom(0.5,3);
+  const height = cellGrid.length;
+  const width = cellGrid[0].row.length;
+  for (let i = Math.floor(height * 1/4); i < height * 3/4; i++) {
+    const r = rangeRandom(0,1.1) * tr;
+    for (let j = Math.floor(width * 1/4 + rangeRandom(0,2) * Math.abs(height / 2 - i) ) ; j < Math.floor(width * 3/4 - rangeRandom(0,2) * Math.abs(height / 2- i)); j++) {
+      cellGrid[i].row[j].state  = 1;//Math.random() < r ? 0 : 1;
+      if (cellGrid[i].row[j].state) {
+        for (let p = 0; p < moore.length; p++) {
+          const jp = j + moore[p][1];
+          const ip = i + moore[p][0];
+          cellGrid[ip].row[jp].neighbors += 1;
+         }
+      }
+    }
+  }
+  return cellGrid;
+}
+
+function improvedRandomizeOld(cellGrid) {
+  const width = cellGrid[0].row.length;
+  const ff = rangeRandom(-width/20,width/5);
+  const tr = rangeRandom(-0.3,0.5);
+  for (let i = Math.floor(cellGrid.length/4); i < cellGrid.length * 3/4; i++) {
+    const r = Math.random() * 2 + tr;
+    for (let j = Math.floor(cellGrid[0].row.length/2.5) - rangeRandom(0,width/10 + ff); j < (cellGrid[0].row.length * 2/3) + rangeRandom(0,width/10 + ff); j++) {
+      cellGrid[i].row[j].state  = Math.random() < r + (Math.random() * 0.2) ? 0 : 1;
+      if (cellGrid[i].row[j].state) {
+        for (let p = 0; p < moore.length; p++) {
+          const jp = j + moore[p][1];
+          const ip = i + moore[p][0];
+          cellGrid[ip].row[jp].neighbors += 1;
+         }
+      }
     }
   }
   return cellGrid;
@@ -1286,13 +1368,19 @@ const NewPage = () => {
               <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {if (paused) setCellGrid(saved); else setFrameMode(FrameEnum.load);}}>
                 <div className = "dark:bg-[url('../reset.png')] bg-[url('../reset_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
+              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => doReroute("/" + string, gridToRLE(cellGrid))}>
+                <div className = "dark:bg-[url('../save.png')] bg-[url('../save_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
+              </Button> 
               <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => doReroute(randomRule(),rule.pattern)}>
                 <div className = "dark:bg-[url('../new.png')] bg-[url('../new_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
                <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {theme == "dark" ? setTheme("light") : setTheme("dark")}}>
                 <div className = "dark:bg-[url('../light.png')] bg-[url('../dark.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>             
+            
+     
            </div>
+
           
           </div>
         : <p>{error.msg}</p>
