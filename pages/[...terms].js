@@ -1364,11 +1364,15 @@ const NewPage = () => {
       if (v.valid) {
         const ruleObj = toRuleObj(terms);
         setRule(ruleObj);  
-        setCellGrid();
-        const initial = !ruleObj.pattern ? randomizeGridPC(cellGrid) : addPattern(cellGrid,ruleObj.pattern);
-        setCellGrid(initial);
-        setSaved(initial);
-        setState(StatusEnum.ready);
+        if (ruleObj.dimensions == 2) {
+          const initial = !ruleObj.pattern ? randomizeGridPC(cellGrid) : addPattern(cellGrid,ruleObj.pattern);
+          setCellGrid(initial);
+          setSaved(initial);
+          setState(StatusEnum.ready);
+        } 
+        else {
+          const inital = !ruleObj.pattern ? randomizeElementary(cellGrid) : addPattern(cellGrid,ruleObj.pattern);
+        }
       } else {
         setError(v);
         setState(StatusEnum.invalid);
@@ -1431,13 +1435,13 @@ const NewPage = () => {
               </Button>
             
             {/*<Button disableRipple = {true} radius = {"none"} onPressStart = {(e) => setCellGrid(makeGridPC(102,102))}>Clear</Button>*/}
-              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {if (true) setCellGrid(randomizeGridPC(makeGridPC(102,102))); else setFrameMode(FrameEnum.rand);}}>
+              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {if (paused) setCellGrid(randomizeGridPC(makeGridPC(102,102))); else setFrameMode(FrameEnum.rand);}}>
                 <div className = "dark:bg-[url('../die.png')] bg-[url('../die_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
-              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {if (true) setCellGrid(makeGridPC(102,102)); else setFrameMode(FrameEnum.clear);}}>
+              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {if (paused) setCellGrid(makeGridPC(102,102)); else setFrameMode(FrameEnum.clear);}}>
                 <div className = "dark:bg-[url('../delete.png')] bg-[url('../delete_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
-              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {if (true) {setCellGrid(copyGridPC(saved)); setFoo(!foo);} else setFrameMode(FrameEnum.load);}}>
+              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {if (paused) {setCellGrid(copyGridPC(saved));} else setFrameMode(FrameEnum.load);}}>
                 <div className = "dark:bg-[url('../reset.png')] bg-[url('../reset_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
               <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => doReroute("/" + string, gridToRLE(cellGrid))}>
