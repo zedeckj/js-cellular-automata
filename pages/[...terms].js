@@ -408,10 +408,16 @@ function validatePattern(rle) {
 
 
 
-function validateTerm(term) {
+function validateTerm(term,tn) {
   let good = {valid: true};
   let dash = false;
   if (term[0] == 'B' || term[0] == 'S') {
+    if (term[0] == 'B') {
+      if (tn != 0) return {valid: false, msg: "B term must be at the beginning of the rulestring (example: B3/S23)", index: [0,term.length]};
+    }
+    else {
+      if (tn != 1) return {valid: false, msg: "S term must be the second term of the rulestring (example: B3/S23)", index: [0,term.length]};
+    }
     let last = '0' - 1;
     let letters = false;
     let dash = false;
@@ -443,6 +449,9 @@ function validateTerm(term) {
     return dash ? {false: false, msg: term[i] + " is unbound to any pattern specifiers (example: 2-a)", index: [i-1, i]} : good;
   }
   else if (term[0] == 'G') {
+    if (tn != 3) {
+      return {valid: false, msg: "G term bust be the third term of the rulestring (example: B3/S23/G4)", index: [0, term.length]};
+    }
     if (term.length != 2 || !isNumber(term[1])) {
       return {valid: false, msg: "G term expects a single digit (example: G4)", index: [2, term.length]};
     }
@@ -480,12 +489,23 @@ function validateTerm(term) {
 */
 function validateRule(terms) {
   if (terms[0][0] == "R") {
-    if (terms.length == 1 || (terms.length == 2 && terms[1][0] == "P")) {
-          
+    const invalidR = {valid : false, index: 0, range: [0, terms[0].length], msg: "R term is invalid, expects a number 0-255"};
+    if (terms[0].length > 5 || terms[0].length == 1) {
+      return invalidR;
+    }
+    else if (terms.length > 3 || (terms.length == 2 && terms[1][0] != "P")) {
+      return {valid: false, index: 1, range: [0, terms[1].length], msg: "R term cannot be combined with other rule string terms"}; 
+    }
+    else {
+       const num = parseInt(terms.substring(1));
+       if (num >= 0 && num <= 255) {
+        return {valid: true}
+       }
+       else return invalidR;
     }
   }  
   for (let i = 0; i < terms.length; i++) {
-    const tv = validateTerm(terms[i]);
+    const tv = validateTerm(terms[i],i);
     if (!tv.valid) {
       return {valid: false, index: i, range: tv.index, msg: tv.msg};
     }
@@ -537,8 +557,10 @@ function getNegation(obj) {
   return {pattern: neg, neighbors}; 
 }
 
+
 function toRuleObj(terms) {
   let transitions = {
+    dimensions: 2, 
     born: [],
     survive: [],
     generations: 2,
@@ -550,7 +572,15 @@ function toRuleObj(terms) {
     let last = ' ';
     let dash = false;
     for (let j = 1; j < terms[i].length; j++) {
-      if (tchar == 'B') {
+      if (tchar == 'R') {
+        const num = parseInt(terms[i].substring(1));
+        transitions = {
+          dimensions: 1,
+          neighbors: [num & 128, num & 64, num & 32, num & 16, num & 8, num & 4, num & 2, num & 1],
+          pattern: false
+        };
+      }
+      else if (tchar == 'B') {
         const l = transitions.born.length-1;
         if (terms[i][j] >= 'a' && terms[i][j] <= 'z') {
           //transitions.born.push({pattern: terms[i][j], neighbors: last - '0'});
@@ -1401,13 +1431,13 @@ const NewPage = () => {
               </Button>
             
             {/*<Button disableRipple = {true} radius = {"none"} onPressStart = {(e) => setCellGrid(makeGridPC(102,102))}>Clear</Button>*/}
-              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {if (paused) setCellGrid(randomizeGridPC(makeGridPC(102,102))); else setFrameMode(FrameEnum.rand);}}>
+              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {if (true) setCellGrid(randomizeGridPC(makeGridPC(102,102))); else setFrameMode(FrameEnum.rand);}}>
                 <div className = "dark:bg-[url('../die.png')] bg-[url('../die_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
-              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {if (paused) setCellGrid(makeGridPC(102,102)); else setFrameMode(FrameEnum.clear);}}>
+              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {if (true) setCellGrid(makeGridPC(102,102)); else setFrameMode(FrameEnum.clear);}}>
                 <div className = "dark:bg-[url('../delete.png')] bg-[url('../delete_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
-              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {if (paused) {setCellGrid(copyGridPC(saved)); setFoo(!foo);} else setFrameMode(FrameEnum.load);}}>
+              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {if (true) {setCellGrid(copyGridPC(saved)); setFoo(!foo);} else setFrameMode(FrameEnum.load);}}>
                 <div className = "dark:bg-[url('../reset.png')] bg-[url('../reset_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
               <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => doReroute("/" + string, gridToRLE(cellGrid))}>
