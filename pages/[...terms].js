@@ -497,7 +497,7 @@ function validateRule(terms) {
       return {valid: false, index: 1, range: [0, terms[1].length], msg: "R term cannot be combined with other rule string terms"}; 
     }
     else {
-       const num = parseInt(terms.substring(1));
+       const num = parseInt(terms[0].substring(1));
        if (num >= 0 && num <= 255) {
         return {valid: true}
        }
@@ -576,7 +576,7 @@ function toRuleObj(terms) {
         const num = parseInt(terms[i].substring(1));
         transitions = {
           dimensions: 1,
-          neighbors: [num & 128, num & 64, num & 32, num & 16, num & 8, num & 4, num & 2, num & 1],
+          neighbors: [num & 1, num & 2 ? 1 : 0, num & 4 ? 1 : 0, num & 8 ? 1 : 0, num & 16 ? 1 : 0, num & 32 ? 1 : 0, num & 64 ? 1 : 0, num & 128 ? 1 : 0],
           pattern: false
         };
       }
@@ -707,6 +707,45 @@ function gridToRLE(cellGrid) {
   return out;
 }
 
+function elemGridToRLE(cellGrid) {
+  let out = "";
+  for (let i = 0; i < cellGrid[0].activejs[0]; i++) {
+    let last = -1;
+    let count = 0;
+    for (let j = 0; j < cellGrid[0].row.length; j++) {
+      const cur = cellGrid[i].row[j].state;
+      if (cur == last) {
+        count += 1;
+      }
+      if (cur != last || j == cellGrid[0].row.length - 1) {
+        if (last != -1) {
+          if (count != 1) {
+            out += count.toString();
+          }
+          out += last == 1 ? "o" : "b";
+        }
+        last = cur;
+        count = 1;
+      }
+    }
+    out += "$";
+  }
+  const widthStr = cellGrid[0].row.length.toString();
+  const rl = widthStr.length + 2;
+  const emp = widthStr + "b$";
+  console.log("Foo");
+  console.log("sub1", out.substring(0,rl));
+  console.log("sub2", out.substring(out.length - rl, out.length));
+  while (out.substring(0,rl) == emp && out.substring(out.length - rl, out.length) == emp) {
+    const temp = out.substring(rl,out.length);
+    out = temp.substring(0, temp.length - rl);
+  }
+  out = out.substring(0,out.length - 1) + "!";
+  return out;
+}
+
+
+
 function addPattern(cellGrid, rle) {
   let width = 0;
   let height = 0;
@@ -714,6 +753,7 @@ function addPattern(cellGrid, rle) {
   let row = 0;
   let count = 0;
   let patternGrid = [[]];
+  let isempty = true;
   for (let i = 0; i < rle.length && rle[i] != '!'; i++) {
     if (rle[i] == '$') {
       col = 0;
@@ -767,6 +807,68 @@ function addPattern(cellGrid, rle) {
 }
 
 
+function addPatternElem(cellGrid, rle) {
+  let width = 0;
+  let height = 0;
+  let col = 0;
+  let row = 0;
+  let count = 0;
+  let patternGrid = [[]];
+  let isempty = true;
+  for (let i = 0; i < rle.length && rle[i] != '!'; i++) {
+    if (rle[i] == '$') {
+      col = 0;
+      row++;
+      count = 0;
+      patternGrid.push([]);
+    }
+    else if ((count == 0 && rle[i] >= '2' && rle[i] <= '9') || (rle[i] >= '0' && rle[i] <= '9')){
+      count = count * 10 + (rle[i] - '0');
+    }
+    else if (rle[i] == 'b' || rle[i] == 'o'){
+      const state = rle[i] == 'b' ? 0 : 1;
+      const amount = count ? count : 1;
+      for (let a = col; a < col + amount; a++) {
+        patternGrid[row][a] = state;
+      }
+      col += count ? count : 1;
+      count = 0;
+    }
+    else {
+      console.log(rle, i, rle[i]);
+      return null;
+    }
+    if (row > height) height = row;
+    if (col > width) width = col;
+  }
+  height++;
+  const hwidth = Math.floor(width/2);
+  const hheight = Math.floor(height/2);
+  const si = 0;
+  const sj = 0;
+  console.log(patternGrid, height, width);
+  for (let i = si; i < si + height; i++) {
+    for (let j = sj; j < sj + width; j++) {
+      if (j - sj > patternGrid[i - si].length - 1) cellGrid[i].row[j].state = 0;
+      else {
+        cellGrid[i].row[j].state = patternGrid[i - si][j - sj];
+        if (cellGrid[i].row[j].state) {
+         // if (!cellGrid[i].activejs.includes(j)) cellGrid[i].activejs.push(j);
+          for (let p = 0; p < moore.length; p++) {
+            //if (!cellGrid[i].activejs.includes(j)) cellGrid[i + moore[p][0]].activejs.push(j + moore[p][1]);
+            cellGrid[i + moore[p][0]].row[j + moore[p][1]].neighbors += 1;
+          }
+        }
+      } 
+    }
+  }
+  cellGrid[0].activejs[0] = height;
+  console.log("pattern out", cellGrid);
+  return cellGrid;
+}
+
+
+
 function makeGridBit(length, height) {
   const cellGrid = Array.from({length: height});
   for (let i = 0; i < height; i++) {
@@ -780,6 +882,8 @@ function makeGridBit(length, height) {
 
 
 function loadGridPC(dstGrid,srcGrid) {
+  
+  dstGrid[0].activejs[0] = srcGrid[0].activejs[0];
   for (let i = 0; i < dstGrid.length; i++) {
     for (let j = 0; j < dstGrid[0].row.length; j++) {
       dstGrid[j].row[i].state = srcGrid[j].row[i].state;
@@ -919,6 +1023,22 @@ function randomizeGridPC(cellGrid) {
 }
 
 
+function randomizeElementary(cellGrid) {
+  const width = cellGrid[0].row.length;
+  const r = Math.random();
+  cellGrid[0].activejs.push(2);
+  for (let j = Math.floor(Math.random() * width/5); j < cellGrid.length - Math.floor(Math.random() * width/5); j++) {
+    cellGrid[1].row[j].state = Math.random() < r ? 1 : 0;
+  }
+  return cellGrid;
+} 
+ 
+function elemStart(cellGrid) {
+  cellGrid[1].row[Math.floor(cellGrid[1].row.length/2)].state = 1;
+  cellGrid[0].activejs.push(2);
+  return cellGrid;
+} 
+  
 function randomizeGridBit(cellGrid) {
   console.log("max",0x80000000);
   for (let i = cellGrid.length/4; i < cellGrid.length * 3/4; i++) {
@@ -1263,6 +1383,27 @@ function useRuleGenPCHensel(cellGrid, rule) {
   return newGrid;
 }
 
+function useRuleElem(cellGrid, rule) {
+  const i = cellGrid[0].activejs[0];
+  if (i >= cellGrid.length) return cellGrid;
+  const newGrid = makeGridPC(102,102);
+  console.log("active i", i);
+  for (let t = 1; t < i; t++) {
+    for (let j = 1; j < cellGrid[0].row.length - 1; j++) 
+      newGrid[t].row[j].state = cellGrid[t].row[j].state;
+  }
+  for (let j = 1; j < cellGrid[0].row.length - 1; j++) {
+        const neighborVal = 
+          (cellGrid[i-1].row[j-1].state ? 4 : 0) +
+          (cellGrid[i-1].row[j].state ? 2 : 0) +
+           cellGrid[i-1].row[j+1].state;
+        if (neighborVal) console.log("val", neighborVal, rule.neighbors);
+        newGrid[i].row[j].state = rule.neighbors[neighborVal] ? 1 : 0; 
+  }
+  newGrid[0].activejs[0] = i + 1; 
+  return newGrid;
+}
+
 
 
 function getCellClass(state,lines) {
@@ -1347,7 +1488,8 @@ const StatusEnum = {
   router: -1,
   uninit: 0,
   ready: 1,
-  invalid: 2
+  invalid: 2,
+  elem: 3
 };
 
 const FrameEnum = {
@@ -1384,14 +1526,17 @@ const NewPage = () => {
       if (v.valid) {
         const ruleObj = toRuleObj(terms);
         setRule(ruleObj);  
-        if (ruleObj.dimensions == 2) {
+        if (ruleObj.dimensions == 2){
           const initial = !ruleObj.pattern ? randomizeGridPC(cellGrid) : addPattern(cellGrid,ruleObj.pattern);
           setCellGrid(initial);
           setSaved(copyGridPC(initial));
           setState(StatusEnum.ready);
         } 
         else {
-          const inital = !ruleObj.pattern ? randomizeElementary(cellGrid) : addPattern(cellGrid,ruleObj.pattern);
+          const initial = !ruleObj.pattern ? elemStart(cellGrid) : addPatternElem(cellGrid,ruleObj.pattern);
+          setCellGrid(initial);
+          setSaved(copyGridPC(initial));
+          setState(StatusEnum.elem);
         }
       } else {
         setError(v);
@@ -1415,6 +1560,19 @@ const NewPage = () => {
     }, buff - time);
     
   }
+  else if (state == StatusEnum.elem && !paused && !reroute) {
+    const buff = 100; 
+    setTimeout(() => {
+      let first = Date.now();
+      if (frameMode == FrameEnum.normal) setCellGrid(useRuleElem(cellGrid,rule));
+      else {
+        setCellGrid(copyGridPC(loadGrid));
+        setFrameMode(FrameEnum.normal);
+      }
+      time = Date.now() - first;
+      if (time > buff) time = buff;
+    }, buff - time);   
+  }
   else if (reroute != false && reroute != "wait") {
     router.push(reroute).then((res) => router.reload());
     setReroute("wait");
@@ -1434,14 +1592,19 @@ const NewPage = () => {
       setCellGrid(toggleCell(cellGrid,i,j));
       setFoo(!foo);
     }
-  }  
+  } 
+
+  const localRandom = (grid) => {
+   if (rule.dimensions == 2) return randomizeGridPC(grid);
+   else return randomizeElementary(grid); 
+  } 
 
   return (
     state != StatusEnum.uninit &&
     <div>
       <p className = "font-mono font-bold text-lg ml-6 mt-1 dark:text-[#d6dbdc] text-slate-800">{string}</p>
       {
-        state == StatusEnum.ready 
+        (state == StatusEnum.ready || state == StatusEnum.elem)
         ? <div className = "flex">
             <Grid cellGrid = {cellGrid} func = {(i,j) => clickBehavior(i,j)}/>
             <div className = "h-32 space-y-4 grid"> 
@@ -1458,11 +1621,11 @@ const NewPage = () => {
                       onClick = {
                         (e) => {
                           if (paused) {
-                            randomizeGridPC(cellGrid); 
+                            localRandom(cellGrid); 
                             setFoo(!foo);
                           } else {
                             clearGrid(loadGrid); 
-                            randomizeGridPC(loadGrid); 
+                            localRandom(loadGrid); 
                             setFrameMode(FrameEnum.load);
                           }}}>
                 <div className = "dark:bg-[url('../die.png')] bg-[url('../die_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
@@ -1475,10 +1638,11 @@ const NewPage = () => {
                 isDisabled = {frameMode == FrameEnum.load} onClick = {(e) => {if (paused) {loadGridPC(cellGrid,saved); setFoo(!foo);} else {loadGridPC(loadGrid,saved); setFrameMode(FrameEnum.load);}}}>
                 <div className = "dark:bg-[url('../reset.png')] bg-[url('../reset_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
-              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => doReroute("/" + string, gridToRLE(cellGrid))}>
+              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => doReroute("/" + string, rule.dimensions == 2 ? gridToRLE(cellGrid) : elemGridToRLE(cellGrid))}>
                 <div className = "dark:bg-[url('../save.png')] bg-[url('../save_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button> 
-              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => doReroute(randomRule(),rule.pattern)}>
+              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => doReroute(rule.dimensions == 2 ? randomRule() : "/R" + (Math.floor(Math.random() * 256)).toString(),
+                                                                                                           rule.pattern)}>
                 <div className = "dark:bg-[url('../new.png')] bg-[url('../new_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
                <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {theme == "dark" ? setTheme("light") : setTheme("dark")}}>
