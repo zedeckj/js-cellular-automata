@@ -882,7 +882,6 @@ function makeGridBit(length, height) {
 
 
 function loadGridPC(dstGrid,srcGrid) {
-  
   dstGrid[0].activejs[0] = srcGrid[0].activejs[0];
   for (let i = 0; i < dstGrid.length; i++) {
     for (let j = 0; j < dstGrid[0].row.length; j++) {
@@ -1026,7 +1025,7 @@ function randomizeGridPC(cellGrid) {
 function randomizeElementary(cellGrid) {
   const width = cellGrid[0].row.length;
   const r = Math.random();
-  cellGrid[0].activejs.push(2);
+  cellGrid[0].activejs[0] = 2;
   for (let j = Math.floor(Math.random() * width/5); j < cellGrid.length - Math.floor(Math.random() * width/5); j++) {
     cellGrid[1].row[j].state = Math.random() < r ? 1 : 0;
   }
