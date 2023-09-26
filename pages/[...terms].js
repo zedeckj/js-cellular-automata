@@ -1454,15 +1454,25 @@ const NewPage = () => {
             
             {/*<Button disableRipple = {true} radius = {"none"} onPressStart = {(e) => setCellGrid(makeGridPC(102,102))}>Clear</Button>*/}
               <Button isIconOnly disableRipple = {true} radius = {"none"} 
-                      isDisabled = {frameMode == FrameEnum.load} onPressStart = {(e) => {clearGrid(loadGrid); randomizeGridPC(loadGrid); setFrameMode(FrameEnum.load);}}>
+                      isDisabled = {frameMode == FrameEnum.load} 
+                      onPressStart = {
+                        (e) => {
+                          if (paused) {
+                            randomizeGridPC(cellGrid); 
+                            setFoo(!foo);
+                          } else {
+                            clearGrid(loadGrid); 
+                            randomizeGridPC(loadGrid); 
+                            setFrameMode(FrameEnum.load);
+                          }}}>
                 <div className = "dark:bg-[url('../die.png')] bg-[url('../die_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
               <Button isIconOnly disableRipple = {true} radius = {"none"} 
-                isDisabled = {frameMode == FrameEnum.load} onPressStart = {(e) => {clearGrid(loadGrid); setFrameMode(FrameEnum.load);}}>
+                isDisabled = {frameMode == FrameEnum.load} onPressStart = {(e) => {if (paused) {clearGrid(cellGrid); setFoo(!foo);} else {clearGrid(loadGrid); setFrameMode(FrameEnum.load);}}}>
                 <div className = "dark:bg-[url('../delete.png')] bg-[url('../delete_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
               <Button isIconOnly disableRipple = {true} radius = {"none"} 
-                isDisabled = {frameMode == FrameEnum.load} onPressStart = {(e) => {loadGridPC(loadGrid,saved); setFrameMode(FrameEnum.load);}}>
+                isDisabled = {frameMode == FrameEnum.load} onPressStart = {(e) => {if (paused) {loadGridPC(cellGrid,saved); setFoo(!foo);} else {loadGridPC(loadGrid,saved); setFrameMode(FrameEnum.load);}}}>
                 <div className = "dark:bg-[url('../reset.png')] bg-[url('../reset_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
               <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => doReroute("/" + string, gridToRLE(cellGrid))}>
@@ -1477,7 +1487,6 @@ const NewPage = () => {
             
      
            </div>
-
           
           </div>
         : <p>{error.msg}</p>
