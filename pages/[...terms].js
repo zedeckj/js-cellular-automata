@@ -651,6 +651,7 @@ function makeGrid(length, height) {
 }
 
 function clearGrid(cellGrid) {
+  cellGrid[0].activejs[0] = 2;
   for (let i = 0; i < cellGrid.length; i++) {
     for (let j = 0; j < cellGrid[0].row.length; j++) {
       cellGrid[i].row[j].state = 0;
