@@ -1015,7 +1015,7 @@ function randomizeGridPC(cellGrid) {
           //if (!cellGrid[ip].activejs.includes(jp)) cellGrid[ip].activejs.push(jp);
           //if (cellGrid[ip].minJ > jp && jp >= 1) cellGrid[ip].minJ = jp;
           //if (cellGrid[ip].maxJ < jp && jp < cellGrid[0].length - 1) cellGrid[ip].maxJ = jp;
-         }
+        }
       }
     }
   }
@@ -1595,6 +1595,7 @@ const NewPage = () => {
   } 
 
   const localRandom = (grid) => {
+   clearGrid(grid);
    if (rule.dimensions == 2) return randomizeGridPC(grid);
    else return randomizeElementary(grid); 
   } 
