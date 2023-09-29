@@ -9,6 +9,7 @@ import pause from "../pause.png";
 import pauseLight from "../pause_light.png";
 import runLight from "../play_light.png";
 import {useTheme} from "next-themes";
+import Popup from 'reactjs-popup';
 
 const empty = {name: "0", map: [[0,0,0],[0,0],[0,0,0]]};
 
@@ -318,7 +319,7 @@ function getHenselOk(last) {
     ok = ['c','e','a','k','i','n','y','q','j','r'];
   }
   else if (last == '4') {
-    ok = ['t','w','z'];
+    ok = ['c','e','a','k','i','n','y','q','j','r','t','w','z'];
   }
   return ok; 
 }
@@ -503,6 +504,18 @@ function validateRule(terms) {
        }
        else return invalidR;
     }
+  }
+  else if (terms[0] == "named") {
+    if (terms.length == 2) {
+      return {valid: true};
+    }
+    else if (terms.length == 3 && terms[2][0] == "P") {
+      if (validatePattern(terms[2].substring(1))) {
+        return {valid: true};
+      }
+      else return {valid: false, index: 2, range: [0, terms[2].length], msg: "Invalid RLE pattern"};
+    }
+    return terms.length;
   }  
   for (let i = 0; i < terms.length; i++) {
     const tv = validateTerm(terms[i],i);
@@ -560,13 +573,17 @@ function getNegation(obj) {
 
 function toRuleObj(terms) {
   let transitions = {
+    name: false,
     dimensions: 2, 
     born: [],
     survive: [],
     generations: 2,
-    pattern: false
+    pattern: false,
   };
   console.log("In terms", terms);
+  if (terms[0] == "named") {
+    return {name: true};
+  }
   for (let i = 0; i < terms.length; i++) {
     const tchar = terms[i][0];
     let last = ' ';
@@ -575,6 +592,7 @@ function toRuleObj(terms) {
       if (tchar == 'R') {
         const num = parseInt(terms[i].substring(1));
         transitions = {
+          name: false,
           dimensions: 1,
           neighbors: [num & 1, num & 2 ? 1 : 0, num & 4 ? 1 : 0, num & 8 ? 1 : 0, num & 16 ? 1 : 0, num & 32 ? 1 : 0, num & 64 ? 1 : 0, num & 128 ? 1 : 0],
           pattern: false
@@ -755,6 +773,7 @@ function addPattern(cellGrid, rle) {
   let count = 0;
   let patternGrid = [[]];
   let isempty = true;
+  console.log("addPettern in", cellGrid, rle);
   for (let i = 0; i < rle.length && rle[i] != '!'; i++) {
     if (rle[i] == '$') {
       col = 0;
@@ -1499,10 +1518,17 @@ const FrameEnum = {
   clear: 3
 }
 
+const NameEnum = {
+  pre: 0,
+  invalid: 1,
+  valid: 2
+}
+
 const NewPage = () => {
   const router = useRouter();
   const [state, setState] = useState(StatusEnum.router);
   const [string, setString] = useState("");
+  const [rulestr, setRulestr] = useState("");
   const [cellGrid, setCellGrid] = useState(makeGridPC(102,102));
   const [rule, setRule] = useState({});
   const [error, setError] = useState({});
@@ -1515,30 +1541,82 @@ const NewPage = () => {
   const { systemTheme, theme, setTheme } = useTheme();
   const currentTheme = theme === 'system' ? systemTheme : theme;
   const [loadGrid, dummy] = useState(makeGridPC(102,102));
+  const [isNamed, setIsNamed] = useState(false);
+  const [nameStatus, setNameStatus] = useState({state: NameEnum.pre, msg: "Enter a name for this rule"});
   let time = 0;
+  const useRuleObj = (ruleObj) => {
+    setRule(ruleObj);  
+    if (ruleObj.dimensions == 2){
+      const initial = !ruleObj.pattern 
+                    ? randomizeGridPC(cellGrid) 
+                    : addPattern(cellGrid,ruleObj.pattern);
+      console.log(initial);
+      setCellGrid(initial);
+      setSaved(copyGridPC(initial));
+      setState(StatusEnum.ready);
+    } 
+    else {
+      const initial = !ruleObj.pattern 
+                      ? elemStart(cellGrid) 
+                      : addPatternElem(cellGrid,ruleObj.pattern);
+      setCellGrid(initial);
+      setSaved(copyGridPC(initial));
+      setState(StatusEnum.elem);
+    }
+  };
   useEffect(() => {
     if (router.isReady && state == StatusEnum.router) {
       console.log("theme", window.localStorage.getItem('prefered-theme'));
       setState(StatusEnum.uninit);
       const terms = router.query.terms;
       const v = validateRule(terms);
-      setString(toRuleString(terms));
+      const s = toRuleString(terms);
+      setRulestr(s);
       if (v.valid) {
-        const ruleObj = toRuleObj(terms);
-        setRule(ruleObj);  
-        if (ruleObj.dimensions == 2){
-          const initial = !ruleObj.pattern ? randomizeGridPC(cellGrid) : addPattern(cellGrid,ruleObj.pattern);
-          setCellGrid(initial);
-          setSaved(copyGridPC(initial));
-          setState(StatusEnum.ready);
-        } 
-        else {
-          const initial = !ruleObj.pattern ? elemStart(cellGrid) : addPatternElem(cellGrid,ruleObj.pattern);
-          setCellGrid(initial);
-          setSaved(copyGridPC(initial));
-          setState(StatusEnum.elem);
+        let ruleObj = toRuleObj(terms);
+        if (ruleObj.name) {
+          console.log("/api/name/" + terms[1]);
+          const res = fetch("/api/name/" + terms[1]).then((raw) => {
+            if (raw.status == 200) {
+              raw.json().then((res) => {
+                ruleObj = res.rule;
+                setString(ruleObj.rulestr + ": " + terms[1]);
+                setIsNamed(true);
+                if (terms.length == 3) {
+                  console.log(terms[2]);
+                  ruleObj.pattern = terms[2].substring(1);
+                }
+                useRuleObj(ruleObj);
+              });
+            }
+            else {
+              setString(terms[1]);
+              setError({msg: terms[1] + " is not defined"});
+              setState(StatusEnum.invalid);
+            }
+          });
         }
-      } else {
+        else {
+          const res = fetch("/api/rulestr", {
+              method: "POST",
+              body: s
+            }).then((raw) => {
+            if (raw.status == 200) {
+              console.log("200");
+              raw.json().then((res) => {
+                console.log("raw json res", res);
+                setString(s + ": " + res.name);
+                setIsNamed(true);
+              });
+            } 
+            else {
+              setString(s);
+            }
+          });
+          useRuleObj(ruleObj);
+        }
+      } 
+      else {
         setError(v);
         setState(StatusEnum.invalid);
       }
@@ -1600,6 +1678,50 @@ const NewPage = () => {
    else return randomizeElementary(grid); 
   } 
 
+  const nameSubmit = async (e) => {
+    e.preventDefault();
+    const name = e.target.name.value;
+    if (name) {
+      if (/[^abcdefghijklmnopqrstuvwxyz123456789]/.test(name)) {
+        setNameStatus({state: NameEnum.valid, msg: "Rule string names must be composed of only lower case letters and numbers"});
+        return;
+      }
+      const raw = await fetch("/api/name/" + name); 
+      const res = await raw.json();
+      if (!res.rule) {
+        console.log("UPLOADING...");
+        const upload = await fetch("/api/save", {
+          method: "PUT",
+          body: JSON.stringify({
+            name,
+            born: rule.born,
+            survive: rule.survive,
+            generations: rule.generations,
+            dimensions: rule.dimensions,
+            pattern: false,
+            rulestr: string
+          }),
+          headers: {
+            "Content-Type": "application/json"
+          } 
+        });
+        if (upload.status == 200) {
+          router.push("named/" + name).then((res) => router.reload());
+        }
+        else {
+          setNameStatus({state: NameEnum.valid, msg: "Naming failed!"});
+        }
+      }
+      else {
+        console.log("info got", res.rule);
+        setNameStatus({state: NameEnum.invalid, msg: "The rule name \"" + name + "\" is already assigned to " + res.rule.rulestr});
+      }
+    } 
+    else {
+      setNameStatus({state: NameEnum.invalid, msg: "Rule name cannot be empty"});
+    }
+  };
+
   return (
     state != StatusEnum.uninit &&
     <div>
@@ -1639,22 +1761,40 @@ const NewPage = () => {
                 isDisabled = {frameMode == FrameEnum.load} onClick = {(e) => {if (paused) {loadGridPC(cellGrid,saved); setFoo(!foo);} else {loadGridPC(loadGrid,saved); setFrameMode(FrameEnum.load);}}}>
                 <div className = "dark:bg-[url('../reset.png')] bg-[url('../reset_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
-              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => doReroute("/" + string, rule.dimensions == 2 ? gridToRLE(cellGrid) : elemGridToRLE(cellGrid))}>
+              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => doReroute("/" + rulestr, rule.dimensions == 2 ? gridToRLE(cellGrid) : elemGridToRLE(cellGrid))}>
                 <div className = "dark:bg-[url('../save.png')] bg-[url('../save_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button> 
+              <div>
+              {!isNamed && 
+                <Popup trigger = {
+                  <Button isIconOnly disableRipple = {true} radius = {"none"} 
+                      onPressStart = {(e) => e}>
+                  <div className = "dark:bg-[url('../name.png')] bg-[url('../name_light.png')] bg-left w-20 h-20 ml-2 bg-contain bg-no-repeat"></div>
+                  </Button>}
+                position = "right center">
+                  <p>{nameStatus.msg}</p>
+                  <form onSubmit = {nameSubmit}>
+                     <input type = "text" name = "name" autocomplete = "off" />
+                     <button type ="submit"> Submit </button>
+                  </form>
+          
+                </Popup>}
+              </div>
+
               <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => doReroute(rule.dimensions == 2 ? randomRule() : "/R" + (Math.floor(Math.random() * 256)).toString(),
                                                                                                            rule.pattern)}>
                 <div className = "dark:bg-[url('../new.png')] bg-[url('../new_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
               </Button>
                <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {theme == "dark" ? setTheme("light") : setTheme("dark")}}>
                 <div className = "dark:bg-[url('../light.png')] bg-[url('../dark.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
-              </Button>             
+              </Button> 
             
+               
      
            </div>
           
           </div>
-        : <p>{error.msg}</p>
+        : <p className = "font-mono ml-4 mt-1 dark:text-[#d6dbdc] text-slate-800">{error.msg}</p>
       }
     </div>
    );
