@@ -10,6 +10,7 @@ import pauseLight from "../pause_light.png";
 import runLight from "../play_light.png";
 import {useTheme} from "next-themes";
 import Popup from 'reactjs-popup';
+import isCleanLanguage from "../lib/profanity";
 
 const empty = {name: "0", map: [[0,0,0],[0,0],[0,0,0]]};
 
@@ -1610,6 +1611,7 @@ const NewPage = () => {
               });
             } 
             else {
+              console.log("NOT FOUND");
               setString(s);
             }
           });
@@ -1683,7 +1685,11 @@ const NewPage = () => {
     const name = e.target.name.value;
     if (name) {
       if (/[^abcdefghijklmnopqrstuvwxyz123456789]/.test(name)) {
-        setNameStatus({state: NameEnum.valid, msg: "Rule string names must be composed of only lower case letters and numbers"});
+        setNameStatus({state: NameEnum.invalid, msg: "Rule string names must be composed of only lower case letters and numbers"});
+        return;
+      }
+      else if (!isCleanLanguage(name)) {
+        setNameStatus({state: NameEnum.invalid, msg: "Watch your language"});
         return;
       }
       const raw = await fetch("/api/name/" + name); 
@@ -1771,13 +1777,13 @@ const NewPage = () => {
                       onPressStart = {(e) => e}>
                   <div className = "dark:bg-[url('../name.png')] bg-[url('../name_light.png')] bg-left w-20 h-20 ml-2 bg-contain bg-no-repeat"></div>
                   </Button>}
-                position = "right center">
-                  <p>{nameStatus.msg}</p>
+                position = "right center"
+                arrow = {false}>
+                  <p className = "tracking-tighter font-mono font-bold dark:text-[#d6dbdc] text-slate-800">{nameStatus.msg}</p>
                   <form onSubmit = {nameSubmit}>
                      <input type = "text" name = "name" autocomplete = "off" />
-                     <button type ="submit"> Submit </button>
+                     <button className = "font-mono font-bold dark:text-[#d6dbdc] text-slate-800 ml-2" type ="submit"> Submit </button>
                   </form>
-          
                 </Popup>}
               </div>
 
