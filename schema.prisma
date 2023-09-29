@@ -1,0 +1,27 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url = env("POSTGRES_PRISMA_URL") // uses connection pooling
+  directUrl = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
+}
+
+
+model Name {
+  rulestr   String @unique
+  name      String
+} 
+
+model Rule {
+  name          String @unique
+  born          Json[]
+  survive       Json[]
+  generations   Int
+  pattern       Boolean
+  dimensions    Int
+  rulestr       String
+}
+
+
