@@ -481,7 +481,7 @@ function validateTerm(term,tn) {
     }
     else return {valid: false, msg: "Invalid RLE pattern", index: [1, term.length]};
   }
-
+  else return {valid: false, msg: term[0] + " is not a valid term identifier", index: [0,0]};
 }
 
 /*
@@ -539,6 +539,9 @@ function validateRule(terms) {
     if (!tv.valid) {
       return {valid: false, index: i, range: tv.index, msg: tv.msg};
     }
+  }
+  if (terms[0][0] == 'B' && (terms.length == 1 || terms[1][0] != 'S')) {
+    return {valid: false, index: 0, range: [0,terms[0].length], msg: "B term must be followed by an S term (ex: B3/S23)"};
   }
   return {valid: true};
    
@@ -1574,7 +1577,6 @@ const NameEnum = {
 const NewPage = () => {
   const router = useRouter();
   const [state, setState] = useState(StatusEnum.router);
-  const [string, setString] = useState("");
   const [rulestr, setRulestr] = useState("");
   const [cellGrid, setCellGrid] = useState(makeGridPC(102,102));
   const [rule, setRule] = useState({});
@@ -1588,12 +1590,10 @@ const NewPage = () => {
   const { systemTheme, theme, setTheme } = useTheme();
   const currentTheme = theme === 'system' ? systemTheme : theme;
   const [loadGrid, dummy] = useState(makeGridPC(102,102));
-  const [isNamed, setIsNamed] = useState(false);
   const [nameStatus, setNameStatus] = useState({state: NameEnum.pre, msg: "Enter a name for this rule"});
   const [speed, setSpeed] = useState(0.5);
+  const [rulename, setRulename] = useState(false);
   let time = 0;
-
-
   const PauseButton = () => {
     return (
     <Button isIconOnly disableRipple = {true} radius = {"none"} disableAnimation = {true} onPressStart = {(e) => setPaused(!paused)}>
@@ -1645,7 +1645,6 @@ const NewPage = () => {
       const terms = router.query.terms;
       const v = validateRule(terms);
       const s = toRuleString(terms);
-      setRulestr(s);
       if (v.valid) {
         let ruleObj = toRuleObj(terms);
         if (ruleObj.name) {
@@ -1654,8 +1653,9 @@ const NewPage = () => {
             if (raw.status == 200) {
               raw.json().then((res) => {
                 ruleObj = res.rule;
-                setString(ruleObj.rulestr + ": " + terms[1]);
-                setIsNamed(true);
+                console.log("ruleobj", ruleObj);
+                setRulestr(ruleObj.rulestr);
+                setRulename(terms[1]);
                 if (terms.length == 3) {
                   console.log(terms[2]);
                   ruleObj.pattern = terms[2].substring(1);
@@ -1664,7 +1664,7 @@ const NewPage = () => {
               });
             }
             else {
-              setString(terms[1]);
+              setRulestr(terms[1]);
               setError({msg: terms[1] + " is not defined"});
               setState(StatusEnum.invalid);
             }
@@ -1679,20 +1679,22 @@ const NewPage = () => {
               console.log("200");
               raw.json().then((res) => {
                 console.log("raw json res", res);
-                setString(s + ": " + res.name);
-                setIsNamed(true);
+                setRulename(res.name);
+                setRulestr(s);
+                useRuleObj(ruleObj);
               });
             } 
             else {
               console.log("NOT FOUND");
-              setString(s);
+              setRulestr(s);
+              useRuleObj(ruleObj);
             }
           });
-          useRuleObj(ruleObj);
         }
       } 
       else {
         setError(v);
+        setRulestr(s);
         setState(StatusEnum.invalid);
       }
        
@@ -1778,7 +1780,7 @@ const NewPage = () => {
             generations: rule.generations,
             dimensions: rule.dimensions,
             pattern: false,
-            rulestr: string
+            rulestr
           }),
           headers: {
             "Content-Type": "application/json"
@@ -1804,7 +1806,7 @@ const NewPage = () => {
   return (
     state != StatusEnum.uninit &&
     <div>
-      <p className = "font-mono font-bold text-lg ml-6 mt-1 dark:text-[#d6dbdc] text-slate-800">{string}</p>
+      {state != StatusEnum.invalid && <p className = "font-mono font-bold text-lg ml-6 mt-1 dark:text-[#d6dbdc] text-slate-800">{rulestr + (rulename ? ": " + rulename : "")}</p>}
       {
         (state == StatusEnum.ready || state == StatusEnum.elem)
         ? <div className = "flex">
@@ -1876,7 +1878,7 @@ const NewPage = () => {
                 <div className = "dark:bg-[url('../save.png')] bg-[url('../save_light.png')] bg-left w-[4.5rem] h-[4.5rem] bg-contain bg-no-repeat"></div>
               </Button> 
               <div>
-              {!isNamed && 
+              {!rulename && 
                 <Popup trigger = {
                   <Button isIconOnly disableRipple = {true} radius = {"none"} 
                       onPressStart = {(e) => e}>
@@ -1886,7 +1888,7 @@ const NewPage = () => {
                 arrow = {false}>
                   <p className = "tracking-tighter font-mono font-bold dark:text-[#d6dbdc] text-slate-800">{nameStatus.msg}</p>
                   <form onSubmit = {nameSubmit}>
-                     <input type = "text" name = "name" autocomplete = "off" />
+                     <input type = "text" name = "name" autoComplete = "off" />
                      <button className = "font-mono font-bold dark:text-[#d6dbdc] text-slate-800 ml-2" type ="submit"> Submit </button>
                   </form>
                 </Popup>}
