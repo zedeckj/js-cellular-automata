@@ -11,6 +11,8 @@ import runLight from "../play_light.png";
 import {useTheme} from "next-themes";
 import Popup from 'reactjs-popup';
 import isCleanLanguage from "../lib/profanity";
+import {Range} from "react-range";
+
 
 const empty = {name: "0", map: [[0,0,0],[0,0],[0,0,0]]};
 
@@ -423,32 +425,46 @@ function validateTerm(term,tn) {
     let last = '0' - 1;
     let letters = false;
     let dash = false;
+    let numi = 1;
     for (let i = 1; i < term.length; i++) {
-      if (!letters && !dash && term[i] == '-') {
+      if (term[i] == '-') {
+        let dashError = {valid: false, msg: "Only a single dash is permitted to specify the negation of hensel notation patterns", index: [i,i]};
+        if (dash) return dashError;
+        if (letters) {
+          dashError.msg = "Hensel notation negations must be specified before any pattern indicators (ex: 2-a)"
+          return dashError;
+        }
         dash = true;
       }
+
       else if (term[i] >= 'a' && term[i] <= 'z') {
         dash = false
         letters = true;
         const ok = getHenselOk(last);
        	if (!ok.includes(term[i])) {
         	console.log(ok, term[i]);
-          return {valid: false, msg: last + term[i] + " is not a valid hensel notation term", index: [i,i+1]};
+          return {valid: false, msg: last + term[i] + " is not a valid hensel notation term", index: [numi,i]};
         }
       }
-      else if (!isNumber(term[i]) || last >= term[i] || dash) {
-        return {valid: false, msg: term[0] + " term expects only ascending digits (example: " + term[0] + "23)", index: [i,i+1]};
+      else if (!isNumber(term[i]) || last >= term[i]) {
+        return {valid: false, msg: term[0] + " term expects only ascending digits (example: " + term[0] + "23)", index: [i,i]};
         
       }
       else {
+        
         if (dash) {
-          return {false: false, msg: term[i] + " is unbound to any pattern specifiers (example: 2-a)", index: [i-1, i]};
+          return {valid: false, msg: term[i-2] + term[i-1] + " is unbound to any pattern specifiers (example: 2-a)", index: [i-2, i-1]};
         }
+        if (term[i] == '9') {
+          return {valid: false, msg: "Only neighbor counts in the range of 0 and 8 are valid", index: [i, i]};
+        }
+        dash = false;
+        numi = i;
         letters = false;
         last = term[i];
       }
     }
-    return dash ? {false: false, msg: term[i] + " is unbound to any pattern specifiers (example: 2-a)", index: [i-1, i]} : good;
+    return dash ? {valid: false, msg: term[term.length - 1] + " is unbound to any pattern specifiers (example: 2-a)", index: [term.length-1, term.length]} : good;
   }
   else if (term[0] == 'G') {
     if (tn != 2) {
@@ -1504,6 +1520,34 @@ const Grid = ({cellGrid,func}) => {
   );
 };
 
+const ErrorScreen = ({error,rulestr,terms}) => {
+  let offset = 0; 
+  console.log(terms);
+  for (let i = 0; i < error.index; i++) {
+    offset += terms[i].length + 1;
+  }
+  offset += error.range[0];
+  const end = error.range[1] - error.range[0];
+  console.log(error, offset);
+  console.log(rulestr);
+  const p1 = rulestr.substring(0, offset);
+  const p2 = rulestr.substring(offset, offset + end + 1);
+  const p3 = rulestr.substring(offset + end + 1, rulestr.length);
+  console.log(p1,p2,p3);
+  return (
+    <div>
+      <div className = "flex">
+        <p className = "font-mono font-bold text-lg ml-4 l-4 mt-1 dark:text-[#d6dbdc] text-slate-800">{p1}</p>
+        <p className = "font-mono font-bold text-lg mt-1 text-red-500">{p2}</p>
+        <p className = "font-mono font-bold text-lg mt-1 dark:text-[#d6dbdc] text-slate-800">{p3}</p>
+      </div>
+      <p className = "font-mono ml-4 mt-1 dark:text-[#d6dbdc] text-slate-800">{error.msg}</p> 
+      <a target = "_blank" className = "font-mono underline ml-4 mt-1 dark:text-[#d6dbdc] text-slate-800" href = "https://conwaylife.com/wiki/Rulestring">Click here for more information</a> 
+    </div>
+  );
+}
+
+
 const StatusEnum = {
   router: -1,
   uninit: 0,
@@ -1525,6 +1569,8 @@ const NameEnum = {
   valid: 2
 }
 
+
+
 const NewPage = () => {
   const router = useRouter();
   const [state, setState] = useState(StatusEnum.router);
@@ -1544,7 +1590,34 @@ const NewPage = () => {
   const [loadGrid, dummy] = useState(makeGridPC(102,102));
   const [isNamed, setIsNamed] = useState(false);
   const [nameStatus, setNameStatus] = useState({state: NameEnum.pre, msg: "Enter a name for this rule"});
+  const [speed, setSpeed] = useState(0.5);
   let time = 0;
+
+
+  const PauseButton = () => {
+    return (
+    <Button isIconOnly disableRipple = {true} radius = {"none"} disableAnimation = {true} onPressStart = {(e) => setPaused(!paused)}>
+                {paused 
+                  ? <div className = "dark:bg-[url('../play.png')] bg-[url('../play_light.png')] bg-left w-[4.5rem] h-[4.5rem] bg-contain bg-no-repeat"></div>
+                  : <div className = "dark:bg-[url('../pause.png')] bg-[url('../pause_light.png')] bg-left w-[4.5rem] h-[4.5rem] bg-contain bg-no-repeat"></div>
+                }
+    </Button>
+    );
+  };
+
+  const MenuButton = ({imgName, onHit}) => {
+    const cn = "dark:bg-[url('../" + imgName + ".png')] bg-[url('../" + imgName + "_light.png')] bg-left w-[4.5rem] h-[4.5rem] bg-contain bg-no-repeat";
+    return (
+        <Button isIconOnly disableRipple = {true} radius = {"none"}
+             isDisabled = {frameMode == FrameEnum.load}
+             onClick = {onHit}>
+          <div className = {cn}> </div>
+        </Button>
+    );
+  };
+    
+
+
   const useRuleObj = (ruleObj) => {
     setRule(ruleObj);  
     if (ruleObj.dimensions == 2){
@@ -1736,15 +1809,47 @@ const NewPage = () => {
         (state == StatusEnum.ready || state == StatusEnum.elem)
         ? <div className = "flex">
             <Grid cellGrid = {cellGrid} func = {(i,j) => clickBehavior(i,j)}/>
-            <div className = "h-32 space-y-4 grid"> 
+            <div className = "h-32 space-y-4 grid">
+              {/*
+              <PauseButton />
+              <MenuButton imgName = "die"
+                       onHit = {(e) => {
+                          if (paused) {
+                            localRandom(cellGrid); 
+                            setFoo(!foo);
+                          } else {
+                            clearGrid(loadGrid); 
+                            localRandom(loadGrid); 
+                            setFrameMode(FrameEnum.load);
+                          }}}>
+              <MenuButton imgName = "delete" 
+                          onHit = {(e) => {
+                            if (paused) {
+                              clearGrid(cellGrid); 
+                              setFoo(!foo);
+                           } else {
+                            clearGrid(loadGrid); 
+                            setFrameMode(FrameEnum.load);
+                          }}}/>
+              <MenuButton imgName = ""
+                          onHit = {(e) => {
+                            if (paused) {
+                              loadGridPC(cellGrid,saved); 
+                              setFoo(!foo);
+                            } else {
+                              loadGridPC(loadGrid,saved); 
+                              setFrameMode(FrameEnum.load);
+                            }}}/>
+   
+                          }
+*/}
+                          
               <Button isIconOnly disableRipple = {true} radius = {"none"} disableAnimation = {true} onPressStart = {(e) => setPaused(!paused)}>
                 {paused 
-                  ? <div className = "dark:bg-[url('../play.png')] bg-[url('../play_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
-                  : <div className = "dark:bg-[url('../pause.png')] bg-[url('../pause_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
+                  ? <div className = "dark:bg-[url('../play.png')] bg-[url('../play_light.png')] bg-left w-[4.5rem] h-[4.5rem] bg-contain bg-no-repeat"></div>
+                  : <div className = "dark:bg-[url('../pause.png')] bg-[url('../pause_light.png')] bg-left w-[4.5rem] h-[4.5rem] bg-contain bg-no-repeat"></div>
                 }
               </Button>
-            
-            {/*<Button disableRipple = {true} radius = {"none"} onPressStart = {(e) => setCellGrid(makeGridPC(102,102))}>Clear</Button>*/}
               <Button isIconOnly disableRipple = {true} radius = {"none"} 
                       isDisabled = {frameMode == FrameEnum.load} 
                       onClick = {
@@ -1757,25 +1862,25 @@ const NewPage = () => {
                             localRandom(loadGrid); 
                             setFrameMode(FrameEnum.load);
                           }}}>
-                <div className = "dark:bg-[url('../die.png')] bg-[url('../die_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
+                <div className = "dark:bg-[url('../die.png')] bg-[url('../die_light.png')] bg-left w-[4.5rem] h-[4.5rem] bg-contain bg-no-repeat"></div>
               </Button>
               <Button isIconOnly disableRipple = {true} radius = {"none"} 
                 isDisabled = {frameMode == FrameEnum.load} onClick = {(e) => {if (paused) {clearGrid(cellGrid); setFoo(!foo);} else {clearGrid(loadGrid); setFrameMode(FrameEnum.load);}}}>
-                <div className = "dark:bg-[url('../delete.png')] bg-[url('../delete_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
+                <div className = "dark:bg-[url('../delete.png')] bg-[url('../delete_light.png')] bg-left w-[4.5rem] h-[4.5rem] bg-contain bg-no-repeat"></div>
               </Button>
               <Button isIconOnly disableRipple = {true} radius = {"none"} 
                 isDisabled = {frameMode == FrameEnum.load} onClick = {(e) => {if (paused) {loadGridPC(cellGrid,saved); setFoo(!foo);} else {loadGridPC(loadGrid,saved); setFrameMode(FrameEnum.load);}}}>
-                <div className = "dark:bg-[url('../reset.png')] bg-[url('../reset_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
+                <div className = "dark:bg-[url('../reset.png')] bg-[url('../reset_light.png')] bg-left w-[4.5rem] h-[4.5rem] bg-contain bg-no-repeat"></div>
               </Button>
               <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => doReroute("/" + rulestr, rule.dimensions == 2 ? gridToRLE(cellGrid) : elemGridToRLE(cellGrid))}>
-                <div className = "dark:bg-[url('../save.png')] bg-[url('../save_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
+                <div className = "dark:bg-[url('../save.png')] bg-[url('../save_light.png')] bg-left w-[4.5rem] h-[4.5rem] bg-contain bg-no-repeat"></div>
               </Button> 
               <div>
               {!isNamed && 
                 <Popup trigger = {
                   <Button isIconOnly disableRipple = {true} radius = {"none"} 
                       onPressStart = {(e) => e}>
-                  <div className = "dark:bg-[url('../name.png')] bg-[url('../name_light.png')] bg-left w-20 h-20 ml-2 bg-contain bg-no-repeat"></div>
+                  <div className = "dark:bg-[url('../name.png')] bg-[url('../name_light.png')] bg-left w-[4.5rem] h-[4.5rem] ml-2 bg-contain bg-no-repeat"></div>
                   </Button>}
                 position = "right center"
                 arrow = {false}>
@@ -1789,18 +1894,20 @@ const NewPage = () => {
 
               <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => doReroute(rule.dimensions == 2 ? randomRule() : "/R" + (Math.floor(Math.random() * 256)).toString(),
                                                                                                            rule.pattern)}>
-                <div className = "dark:bg-[url('../new.png')] bg-[url('../new_light.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
+                <div className = "dark:bg-[url('../new.png')] bg-[url('../new_light.png')] bg-left w-[4.5rem] h-[4.5rem] bg-contain bg-no-repeat"></div>
               </Button>
                <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {theme == "dark" ? setTheme("light") : setTheme("dark")}}>
-                <div className = "dark:bg-[url('../light.png')] bg-[url('../dark.png')] bg-left w-20 h-20 bg-contain bg-no-repeat"></div>
-              </Button> 
-            
-               
-     
+                <div className = "dark:bg-[url('../light.png')] bg-[url('../dark.png')] bg-left w-[4.5rem] h-[4.5rem] bg-contain bg-no-repeat"></div>
+              </Button>
+              <a target = "_blank"
+                 href = "https://conwaylife.com/wiki/Rulestring"> 
+                <div className = "dark:bg-[url('../info.png')] bg-[url('../info_light.png')] bg-left w-[4.5rem] h-[4.5rem] bg-contain bg-no-repeat"></div>
+              </a>
            </div>
           
           </div>
-        : <p className = "font-mono ml-4 mt-1 dark:text-[#d6dbdc] text-slate-800">{error.msg}</p>
+       : state == StatusEnum.invalid && 
+         <ErrorScreen error = {error} rulestr = {rulestr} terms = {router.query.terms}/> 
       }
     </div>
    );
