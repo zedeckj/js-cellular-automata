@@ -1591,9 +1591,8 @@ const NewPage = () => {
   const currentTheme = theme === 'system' ? systemTheme : theme;
   const [loadGrid, dummy] = useState(makeGridPC(102,102));
   const [nameStatus, setNameStatus] = useState({state: NameEnum.pre, msg: "Enter a name for this rule"});
-  const [speed, setSpeed] = useState(0.5);
+  const [speed, setSpeed] = useState([200]);
   const [rulename, setRulename] = useState(false);
-  let time = 0;
   const PauseButton = () => {
     return (
     <Button isIconOnly disableRipple = {true} radius = {"none"} disableAnimation = {true} onPressStart = {(e) => setPaused(!paused)}>
@@ -1702,31 +1701,25 @@ const NewPage = () => {
   }, [router.isReady]);
 
   if (state == StatusEnum.ready && !paused && !reroute) {
-    const buff = 100;
+    let buff = 500 - speed;
     setTimeout(() => {
-      let first = Date.now();
       if (frameMode == FrameEnum.normal) setCellGrid(useRuleGenPCHensel(cellGrid,rule));
       else {
         setCellGrid(copyGridPC(loadGrid));
         setFrameMode(FrameEnum.normal);
       }
-      time = Date.now() - first;
-      if (time > buff) time = buff;
-    }, buff - time);
+    }, buff);
     
   }
   else if (state == StatusEnum.elem && !paused && !reroute) {
-    const buff = 100; 
+    let buff = 500 - speed; 
     setTimeout(() => {
-      let first = Date.now();
       if (frameMode == FrameEnum.normal) setCellGrid(useRuleElem(cellGrid,rule));
       else {
         setCellGrid(copyGridPC(loadGrid));
         setFrameMode(FrameEnum.normal);
       }
-      time = Date.now() - first;
-      if (time > buff) time = buff;
-    }, buff - time);   
+    }, buff);   
   }
   else if (reroute != false && reroute != "wait") {
     router.push(reroute).then((res) => router.reload());
@@ -1809,9 +1802,10 @@ const NewPage = () => {
       {state != StatusEnum.invalid && <p className = "font-mono font-bold text-lg ml-6 mt-1 dark:text-[#d6dbdc] text-slate-800">{rulestr + (rulename ? ": " + rulename : "")}</p>}
       {
         (state == StatusEnum.ready || state == StatusEnum.elem)
-        ? <div className = "flex">
+        ? <div> 
+          <div className = "flex">
             <Grid cellGrid = {cellGrid} func = {(i,j) => clickBehavior(i,j)}/>
-            <div className = "h-32 space-y-4 grid">
+            <div className = "h-[45rem] grid">
               {/*
               <PauseButton />
               <MenuButton imgName = "die"
@@ -1868,14 +1862,14 @@ const NewPage = () => {
               </Button>
               <Button isIconOnly disableRipple = {true} radius = {"none"} 
                 isDisabled = {frameMode == FrameEnum.load} onClick = {(e) => {if (paused) {clearGrid(cellGrid); setFoo(!foo);} else {clearGrid(loadGrid); setFrameMode(FrameEnum.load);}}}>
-                <div className = "dark:bg-[url('../delete.png')] bg-[url('../delete_light.png')] bg-left w-[4.5rem] h-[4.5rem] bg-contain bg-no-repeat"></div>
+                <div className = "dark:bg-[url('../delete.png')] bg-[url('../delete_light.png')] bg-left w-[4.5rem] h-[4.5rem] mt-2 bg-contain bg-no-repeat"></div>
               </Button>
               <Button isIconOnly disableRipple = {true} radius = {"none"} 
                 isDisabled = {frameMode == FrameEnum.load} onClick = {(e) => {if (paused) {loadGridPC(cellGrid,saved); setFoo(!foo);} else {loadGridPC(loadGrid,saved); setFrameMode(FrameEnum.load);}}}>
-                <div className = "dark:bg-[url('../reset.png')] bg-[url('../reset_light.png')] bg-left w-[4.5rem] h-[4.5rem] bg-contain bg-no-repeat"></div>
+                <div className = "dark:bg-[url('../reset.png')] bg-[url('../reset_light.png')] bg-left w-[4.5rem] h-[4.5rem] mt-2 bg-contain bg-no-repeat"></div>
               </Button>
               <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => doReroute("/" + rulestr, rule.dimensions == 2 ? gridToRLE(cellGrid) : elemGridToRLE(cellGrid))}>
-                <div className = "dark:bg-[url('../save.png')] bg-[url('../save_light.png')] bg-left w-[4.5rem] h-[4.5rem] bg-contain bg-no-repeat"></div>
+                <div className = "dark:bg-[url('../save.png')] bg-[url('../save_light.png')] bg-left w-[4.5rem] h-[4.5rem] mt-2 bg-contain bg-no-repeat"></div>
               </Button> 
               <div>
               {!rulename && 
@@ -1903,11 +1897,27 @@ const NewPage = () => {
               </Button>
               <a target = "_blank"
                  href = "https://conwaylife.com/wiki/Rulestring"> 
-                <div className = "dark:bg-[url('../info.png')] bg-[url('../info_light.png')] bg-left w-[4.5rem] h-[4.5rem] bg-contain bg-no-repeat"></div>
+                <div className = "dark:bg-[url('../info.png')] bg-[url('../info_light.png')] bg-left w-[4.5rem] h-[4.5rem] mt-4 bg-contain bg-no-repeat"></div>
               </a>
            </div>
-          
           </div>
+          <div className = "ml-8 mt-1 flex"> 
+            <div className = "dark:bg-[url('../turtle.png')] bg-[url('../turtle_light.png')] bg-left w-[4.5rem] h-[4.5rem] mr-8 mt-1 bg-contain bg-no-repeat"> </div>
+            <div className = "mt-7 mr-6">
+              <Range step = {5} min = {100} max = {500} values = {speed} onChange = {(values) => setSpeed(values)} 
+                 renderTrack={({ props, children }) => (
+                  <div {...props} className = "w-[35rem] h-1.5 bg-slate-500">
+                    {children}
+                  </div>
+                  )}
+                renderThumb={({ props }) => (
+                  <div {...props} className = "w-10 h-10 dark:bg-[#d6dbdc] bg-slate-800"/>
+                )}/>
+            </div>
+            <div className = "dark:bg-[url('../fast.png')] bg-[url('../fast_light.png')] bg-left w-[4.5rem] h-[4.5rem] mr-4 bg-contain bg-no-repeat"> </div>
+          </div>
+        <p>{speed}</p>           
+       </div>
        : state == StatusEnum.invalid && 
          <ErrorScreen error = {error} rulestr = {rulestr} terms = {router.query.terms}/> 
       }
