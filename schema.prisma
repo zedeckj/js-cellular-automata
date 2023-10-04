@@ -9,6 +9,17 @@ datasource db {
 }
 
 
+model BSFKLRule {
+  name          String @unique
+  born          Json[]
+  survive       Json[]
+  force         Json[]
+  kill          Json[]
+  live          Json[]
+  generations   Int
+  rulestr       String
+}
+
 model Name {
   rulestr   String @unique
   name      String
@@ -19,8 +30,6 @@ model Rule {
   born          Json[]
   survive       Json[]
   generations   Int
-  pattern       Boolean
-  dimensions    Int
   rulestr       String
 }
 

@@ -367,9 +367,11 @@ function randomNeighbors(isHensel,restrict) {
 
 
 function randomRule() {
-  let out = "/B" + randomNeighbors(Math.random() > 0.5,false) + "/S" + randomNeighbors(Math.random() > 0.5,false);
-  if (Math.random() > 0.6) out +=  "/F" + randomNeighbors(Math.random() > 0.5,false) + "/K" + randomNeighbors(Math.random() > 0.5,true) + "/L" + randomNeighbors(Math.random() > 0.5,false);
-  if (Math.random() > 0.6) {
+  const hensel = false;
+  let out = "/B" + randomNeighbors(hensel,false) + "/S" + randomNeighbors(hensel,false);
+  if (Math.random() > 0) out +=  "/F" + randomNeighbors(hensel,false) + "/K" + 
+    randomNeighbors(hensel,true) + "/L" + randomNeighbors(hensel,false);
+  if (Math.random() > 1) {
     out += "/G" + (Math.floor(Math.random() * 6) + 2);
   }
   console.log(out);
@@ -617,7 +619,6 @@ function getNegation(obj) {
 
 function toRuleObjNew(terms) {
   let transitions = {
-    name: false,
     dimensions: 2, 
     isBSFKL: false,
     born: [],
@@ -630,7 +631,7 @@ function toRuleObjNew(terms) {
   };
   console.log("In terms", terms);
   if (terms[0] == "named") {
-    return {name: true};
+    return false;
   }
   for (let i = 0; i < terms.length; i++) {
     const tchar = terms[i][0];
@@ -641,7 +642,6 @@ function toRuleObjNew(terms) {
       if (tchar == 'R') {
         const num = parseInt(terms[i].substring(1));
         transitions = {
-          name: false,
           dimensions: 1,
           neighbors: [num & 1, num & 2 ? 1 : 0, num & 4 ? 1 : 0, num & 8 ? 1 : 0, num & 16 ? 1 : 0, num & 32 ? 1 : 0, num & 64 ? 1 : 0, num & 128 ? 1 : 0],
           pattern: false
@@ -782,7 +782,7 @@ function toRuleObjNew(terms) {
   return transitions;
 }
 
-
+/*
 function toRuleObj(terms) {
   let transitions = {
     name: false,
@@ -872,7 +872,7 @@ function toRuleObj(terms) {
   console.log("rule",transitions);
   return transitions;
 }
-
+*/
 
 function makeGrid(length, height) {
   const cellGrid = Array.from({length: height});
@@ -1981,9 +1981,9 @@ const NewPage = () => {
   const useRuleObj = (ruleObj) => {
     console.log("ruleobj", ruleObj);
     setRule(ruleObj);
-    ruleObj.survive = ruleObj.survive.sort((a,b) => a.neighbors - b.neighbors);
-    ruleObj.born = ruleObj.born.sort((a,b) => a.neighbors - b.neighbors);
-    if (ruleObj.dimensions == 2){
+   if (ruleObj.dimensions == 2){
+      ruleObj.survive = ruleObj.survive.sort((a,b) => a.neighbors - b.neighbors);
+      ruleObj.born = ruleObj.born.sort((a,b) => a.neighbors - b.neighbors);
       const initial = !ruleObj.pattern 
                     ? randomizeGridPC(cellGrid) 
                     : addPattern(cellGrid,ruleObj.pattern);
@@ -2001,6 +2001,37 @@ const NewPage = () => {
       setState(StatusEnum.elem);
     }
   };
+
+
+  const neighComp = (a,b) => a.neighbors - b.neighbors;
+
+  const prepFetchedRule = (fetchObj) => {
+    const ruleObj = {
+      dimensions: 2,
+      isBSFKL: false,
+      generations: fetchObj.generations,
+      born: fetchObj.born.sort(neighComp),
+      survive: fetchObj.survive.sort(neighComp),
+      pattern: false,
+    };
+    return ruleObj;
+  }
+
+  const prepFetchedBSFKL = (fetchObj) => {
+    const ruleObj = { 
+      dimensions: 2,
+      isBSFKL: true,
+      born: fetchObj.born.sort(neighComp),
+      survive: fetchObj.survive.sort(neighComp),
+      force: fetchObj.force.sort(neighComp),
+      kill: fetchObj.kill.sort(neighComp),
+      live: fetchObj.live.sort(neighComp),
+      generations: fetchObj.generations,
+      pattern: false
+    };
+    return ruleObj;  
+  }
+
   useEffect(() => {
     if (router.isReady && state == StatusEnum.router) {
       console.log("theme", window.localStorage.getItem('prefered-theme'));
@@ -2010,13 +2041,13 @@ const NewPage = () => {
       const s = toRuleString(terms);
       if (v.valid) {
         let ruleObj = toRuleObjNew(terms);
-        if (ruleObj.name) {
+        if (!ruleObj) {
           console.log("/api/name/" + terms[1]);
           const res = fetch("/api/name/" + terms[1]).then((raw) => {
             if (raw.status == 200) {
               raw.json().then((res) => {
-                ruleObj = res.rule;
-                setRulestr(ruleObj.rulestr);
+                ruleObj = prepFetchedRule(res.rule);
+                setRulestr(res.rule.rulestr);
                 setRulename(terms[1]);
                 if (terms.length == 3) {
                   console.log(terms[2]);
@@ -2026,9 +2057,28 @@ const NewPage = () => {
               });
             }
             else {
-              setRulestr(terms[1]);
-              setError({msg: terms[1] + " is not defined"});
-              setState(StatusEnum.invalid);
+              console.log("not found in reg rules");
+              const res = fetch("/api/name/bsfkl/" + terms[1]).then((raw) => {
+                if (raw.status == 200) {
+                  raw.json().then((res) => {
+                    setRulestr(res.rule.rulestr);
+                    ruleObj = prepFetchedBSFKL(res.rule);
+                    setRulename(terms[1]);
+                    if (terms.length == 3) {
+                      console.log(terms[2]);
+                      ruleObj.pattern = terms[2].substring(1);
+                    }
+                    useRuleObj(ruleObj);
+                  });
+                } 
+                else {              
+                  console.log("not found in bsfkl rules");
+                  setRulestr(terms[1]);
+                  setError({msg: terms[1] + " is not defined", index: 0, 
+                            range: [0,terms[1].length]});
+                  setState(StatusEnum.invalid);
+                }
+              });
             }
           });
         }
@@ -2127,21 +2177,39 @@ const NewPage = () => {
       const res = await raw.json();
       if (!res.rule) {
         console.log("UPLOADING...");
-        const upload = await fetch("/api/save", {
-          method: "PUT",
-          body: JSON.stringify({
-            name,
-            born: rule.born,
-            survive: rule.survive,
-            generations: rule.generations,
-            dimensions: rule.dimensions,
-            pattern: false,
-            rulestr
-          }),
-          headers: {
-            "Content-Type": "application/json"
-          } 
-        });
+        const upload = rule.isBSFKL
+          ? 
+          await fetch("/api/saveBSFKL", {
+            method: "PUT",
+            body: JSON.stringify({
+              name,
+              born: rule.born,
+              survive: rule.survive,
+              force: rule.force,
+              kill: rule.kill,
+              live: rule.live,
+              generations: rule.generations,
+              rulestr
+            }),
+            headers: {
+              "Content-Type": "application/json"
+            } 
+          })
+          :
+          await fetch("/api/save", {
+            method: "PUT",
+            body: JSON.stringify({
+              name,
+              born: rule.born,
+              survive: rule.survive,
+              generations: rule.generations,
+              rulestr
+            }),
+            headers: {
+              "Content-Type": "application/json"
+            } 
+          })
+        ;
         if (upload.status == 200) {
           router.push("named/" + name).then((res) => router.reload());
         }
@@ -2168,7 +2236,7 @@ const NewPage = () => {
         ? <div> 
           <div className = "flex">
             <Grid cellGrid = {cellGrid} func = {(i,j) => clickBehavior(i,j)}/>
-            <div className = {rulename ? "h-[40rem] grid" : "h-[45rem] grid"}>
+            <div className = {(rulename || rule.dimensions == 1) ? "h-[40rem] grid" : "h-[45rem] grid"}>
               {/*
               <PauseButton />
               <MenuButton imgName = "die"
@@ -2235,7 +2303,7 @@ const NewPage = () => {
                 <div className = "dark:bg-[url('../save.png')] bg-[url('../save_light.png')] bg-left w-[4.5rem] h-[4.5rem] mt-2 bg-contain bg-no-repeat"></div>
               </Button> 
               <div>
-              {!rulename && 
+              {!rulename && rule.dimensions == 2 &&
                 <Popup trigger = {
                   <Button isIconOnly disableRipple = {true} radius = {"none"} 
                       onPressStart = {(e) => e}>
