@@ -2335,7 +2335,7 @@ const NewPage = () => {
           <div className = "ml-8 mt-1 flex"> 
             <div className = "dark:bg-[url('../turtle.png')] bg-[url('../turtle_light.png')] bg-left w-[4.5rem] h-[4.5rem] mr-8 mt-1 bg-contain bg-no-repeat"> </div>
             <div className = "mt-7 mr-6">
-              <Range step = {5} min = {0} max = {500} values = {speed} onChange = {(values) => setSpeed(values)} 
+              <Range step = {5} min = {0} max = {500} values = {speed} onChange = {(values) => speed[0] = values[0]} 
                  renderTrack={({ props, children }) => (
                   <div {...props} className = "w-[35rem] h-1.5 bg-slate-500">
                     {children}
