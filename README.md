@@ -1,6 +1,6 @@
 ## Cellular Automata Rulestring Parser and Simulator
 
-https://js-cellular-automata.vercel.app/
+https://nxtlife.vercel.app/
 
 This is an old NextJS project I made after struggling to find an online simulator capable of running the common notations for cellular automata rules that are [Life-like](https://conwaylife.com/wiki/Life-like_cellular_automaton), [Elementary](https://en.wikipedia.org/wiki/Elementary_cellular_automaton), [Generations based](https://conwaylife.com/wiki/Generations), or [BSFKL](https://conwaylife.com/wiki/BSFKL). This simulator also supports [Hensel Notation](https://conwaylife.com/wiki/Isotropic_non-totalistic_rule#Square_grid). 
 
