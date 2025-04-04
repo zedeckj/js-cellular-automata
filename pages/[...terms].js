@@ -327,6 +327,11 @@ function getHenselOk(last) {
   return ok; 
 }
 
+
+// Creates a string of numeric characters representing 
+// valid legal neighborcounts for a transition. 
+// `isHensel` specifies if hensel notation should be used
+// `restrict` specifies that '0' is invalid 
 function randomNeighbors(isHensel,restrict) {
   let out = "";
   for (let i = restrict ? '1' : '0'; i < '9'; i++) {
@@ -334,6 +339,7 @@ function randomNeighbors(isHensel,restrict) {
       out += i;
       if (isHensel && Math.random() > 0.5) {
         let options = getHenselOk(i);
+				console.log(options);
         if (options.length == 2) {
           out += Math.random() > 0.5 ? options[0] : options[1];
         }
@@ -365,9 +371,27 @@ function randomNeighbors(isHensel,restrict) {
 }
 
 
+function randomBool(probOfTrue = 0.5) {
+	return Math.random() < probOfTrue;
+}
 
-function randomRule() {
-  const hensel = false;
+function randIsHensel() {
+	return randomBool(0.8)
+}
+
+function randomTransition(character) {
+	return "/" + character + randomNeighbors(randIsHensel(), character == "K")
+}
+
+function randomLifelike() {
+	return randomTransition("B") + randomTransition("S")
+}
+
+function randomGenerations(hensel) {
+	return randomLifelike() + "/G" + (Math.floor(Math.random() * 6) + 2)	
+}
+
+function randomBSKFL(hensel) {
   let out = "/B" + randomNeighbors(hensel,false) + "/S" + randomNeighbors(hensel,false);
   if (Math.random() > 0) out +=  "/F" + randomNeighbors(hensel,false) + "/K" + 
     randomNeighbors(hensel,true) + "/L" + randomNeighbors(hensel,false);
@@ -378,6 +402,19 @@ function randomRule() {
   return out;
 }
 
+function randomElementary() {
+	return "/R" + (Math.floor(Math.random() * 256))  
+}
+
+
+function randomRule() {
+	const r = Math.random()
+	console.log(r)
+	if (r < 0.4) return randomLifelike()
+	else if (r < 0.6) return randomGenerations()
+	else if (r < 0.8) return randomBSKFL()
+	else return randomElementary()
+}
 
 
 function validatePattern(rle) {
@@ -454,7 +491,6 @@ function validateCondTerm(term,tn) {
         letters = true;
         const ok = getHenselOk(last);
        	if (!ok.includes(term[i])) {
-        	console.log(ok, term[i]);
           return {valid: false, msg: last + term[i] + " is not a valid hensel notation term", index: [numi,i]};
         }
       }
@@ -613,7 +649,6 @@ function getNegation(obj) {
   for (let i = 0; i < all.length; i++) {
     if (!patterns.includes(all[i])) neg.push(all[i]);
   }
-  console.log("negation of ", patterns, neighbors, neg);
   return {pattern: neg, neighbors}; 
 }
 
@@ -629,7 +664,6 @@ function toRuleObjNew(terms) {
     generations: 2,
     pattern: false,
   };
-  console.log("In terms", terms);
   if (terms[0] == "named") {
     return false;
   }
@@ -684,16 +718,13 @@ function toRuleObjNew(terms) {
         }
         else {
           if (dash) {
-            console.log("here1");
             transitions.survive[l] = getNegation(transitions.survive[l]);
-            console.log("fine");
           }         
           dash = false;
           last = terms[i][j];  
           transitions.survive.push({pattern: false, neighbors: terms[i][j] - '0'});
         }
         if (dash && j == terms[i].length - 1) {
-          console.log("here2");
           transitions.survive[l] = getNegation(transitions.survive[l]);
         }
  
@@ -778,7 +809,6 @@ function toRuleObjNew(terms) {
       }      
     }
   }
-  console.log("rule",transitions);
   return transitions;
 }
 
@@ -942,9 +972,6 @@ function gridToRLE(cellGrid) {
   const widthStr = cellGrid[0].row.length.toString();
   const rl = widthStr.length + 2;
   const emp = widthStr + "b$";
-  console.log("Foo");
-  console.log("sub1", out.substring(0,rl));
-  console.log("sub2", out.substring(out.length - rl, out.length));
   while (out.substring(0,rl) == emp && out.substring(out.length - rl, out.length) == emp) {
     const temp = out.substring(rl,out.length);
     out = temp.substring(0, temp.length - rl);
@@ -979,9 +1006,6 @@ function elemGridToRLE(cellGrid) {
   const widthStr = cellGrid[0].row.length.toString();
   const rl = widthStr.length + 2;
   const emp = widthStr + "b$";
-  console.log("Foo");
-  console.log("sub1", out.substring(0,rl));
-  console.log("sub2", out.substring(out.length - rl, out.length));
   while (out.substring(0,rl) == emp && out.substring(out.length - rl, out.length) == emp) {
     const temp = out.substring(rl,out.length);
     out = temp.substring(0, temp.length - rl);
@@ -1000,7 +1024,6 @@ function addPattern(cellGrid, rle) {
   let count = 0;
   let patternGrid = [[]];
   let isempty = true;
-  console.log("addPettern in", cellGrid, rle);
   for (let i = 0; i < rle.length && rle[i] != '!'; i++) {
     if (rle[i] == '$') {
       col = 0;
@@ -1021,7 +1044,6 @@ function addPattern(cellGrid, rle) {
       count = 0;
     }
     else {
-      console.log(rle, i, rle[i]);
       return null;
     }
     if (row > height) height = row;
@@ -1033,7 +1055,6 @@ function addPattern(cellGrid, rle) {
   const si = Math.floor(cellGrid.length/2) - hheight;
   const sj = Math.floor(cellGrid[0].row.length/2) - hwidth;
   
-  console.log(patternGrid, height, width);
   for (let i = si; i < si + height; i++) {
     for (let j = sj; j < sj + width; j++) {
       if (j - sj > patternGrid[i - si].length - 1) cellGrid[i].row[j].state = 0;
@@ -1049,7 +1070,6 @@ function addPattern(cellGrid, rle) {
      } 
     }
   }
-  console.log("pattern out", cellGrid);
   return cellGrid;
 }
 
@@ -1082,7 +1102,6 @@ function addPatternElem(cellGrid, rle) {
       count = 0;
     }
     else {
-      console.log(rle, i, rle[i]);
       return null;
     }
     if (row > height) height = row;
@@ -1093,7 +1112,6 @@ function addPatternElem(cellGrid, rle) {
   const hheight = Math.floor(height/2);
   const si = 0;
   const sj = 0;
-  console.log(patternGrid, height, width);
   for (let i = si; i < si + height; i++) {
     for (let j = sj; j < sj + width; j++) {
       if (j - sj > patternGrid[i - si].length - 1) cellGrid[i].row[j].state = 0;
@@ -1110,7 +1128,6 @@ function addPatternElem(cellGrid, rle) {
     }
   }
   cellGrid[0].activejs[0] = height;
-  console.log("pattern out", cellGrid);
   return cellGrid;
 }
 
@@ -1309,11 +1326,9 @@ function elemStart(cellGrid) {
 } 
   
 function randomizeGridBit(cellGrid) {
-  console.log("max",0x80000000);
   for (let i = cellGrid.length/4; i < cellGrid.length * 3/4; i++) {
     for (let j = Math.floor(cellGrid[0].length/4); j < cellGrid[0].length * 3/4; j++) {
       cellGrid[i][j]  = Math.floor(Math.random() * (1 << 31));
-      if (cellGrid[i][j]) console.log(cellGrid[i][j]);
     }
   }
   return cellGrid;
@@ -1519,7 +1534,6 @@ function useRuleBitBranchless(cellGrid, rule) {
       }
       if (count && log && count == randN) {
         log = false;
-        console.log("neighbors", count, neighbors);
       }
       newGrid = setBit(newGrid,i,j,getNewBit(rule,getBit(cellGrid,i,j),neighbors));
       /*
@@ -1571,7 +1585,6 @@ function useRuleGenPC(cellGrid, rule) {
   const dieMode = rule.generations > 2 ? 2 : 0;
   for (let i = 1; i < cellGrid.length - 1; i++) {
     if (cellGrid[i].activejs.length) {
-      console.log("row");
       for (let j = 1; j < cellGrid[i].row.length - 1; j++) {
         const cell = cellGrid[i].row[j];
         if (cell.state == 1) {
@@ -1640,7 +1653,6 @@ function useRuleBSFKL(cellGrid, rule) {
         if (cell.state == 1) {
           const killData = sortedIncludes(rule.kill, cell.destructives);
           if (killData) {
-            console.log("KILL");
             if (killData.pattern) {
               let patterns = allhensel;
               for (let p = 0; p < moore.length; p++) {
@@ -1656,7 +1668,6 @@ function useRuleBSFKL(cellGrid, rule) {
           else {
             const data = sortedIncludes(rule.survive, cell.neighbors);
             if (!data) {
-              console.log("!");
               newGrid = updateNeighborsBSFKL(newGrid,i,j,2);
             }
             else if (data.pattern) {
@@ -1787,7 +1798,6 @@ function useRuleElem(cellGrid, rule) {
   const i = cellGrid[0].activejs[0];
   if (i >= cellGrid.length) return cellGrid;
   const newGrid = makeGridPC(102,102);
-  console.log("active i", i);
   for (let t = 1; t < i; t++) {
     for (let j = 1; j < cellGrid[0].row.length - 1; j++) 
       newGrid[t].row[j].state = cellGrid[t].row[j].state;
@@ -1797,7 +1807,6 @@ function useRuleElem(cellGrid, rule) {
           (cellGrid[i-1].row[j-1].state ? 4 : 0) +
           (cellGrid[i-1].row[j].state ? 2 : 0) +
            cellGrid[i-1].row[j+1].state;
-        if (neighborVal) console.log("val", neighborVal, rule.neighbors);
         newGrid[i].row[j].state = rule.neighbors[neighborVal] ? 1 : 0; 
   }
   newGrid[0].activejs[0] = i + 1; 
@@ -1886,18 +1895,14 @@ const Grid = ({cellGrid,func}) => {
 
 const ErrorScreen = ({error,rulestr,terms}) => {
   let offset = 0; 
-  console.log(terms);
   for (let i = 0; i < error.index; i++) {
     offset += terms[i].length + 1;
   }
   offset += error.range[0];
   const end = error.range[1] - error.range[0];
-  console.log(error, offset);
-  console.log(rulestr);
   const p1 = rulestr.substring(0, offset);
   const p2 = rulestr.substring(offset, offset + end + 1);
   const p3 = rulestr.substring(offset + end + 1, rulestr.length);
-  console.log(p1,p2,p3);
   return (
     <div>
       <div className = "flex">
@@ -1979,7 +1984,6 @@ const NewPage = () => {
 
 
   const useRuleObj = (ruleObj) => {
-    console.log("ruleobj", ruleObj);
     setRule(ruleObj);
    if (ruleObj.dimensions == 2){
       ruleObj.survive = ruleObj.survive.sort((a,b) => a.neighbors - b.neighbors);
@@ -1987,7 +1991,6 @@ const NewPage = () => {
       const initial = !ruleObj.pattern 
                     ? randomizeGridPC(cellGrid) 
                     : addPattern(cellGrid,ruleObj.pattern);
-      console.log(initial);
       setCellGrid(initial);
       setSaved(copyGridBSFKL(initial));
       setState(StatusEnum.ready);
@@ -2034,7 +2037,6 @@ const NewPage = () => {
 
   useEffect(() => {
     if (router.isReady && state == StatusEnum.router) {
-      console.log("theme", window.localStorage.getItem('prefered-theme'));
       setState(StatusEnum.uninit);
       const terms = router.query.terms;
       const v = validateRule(terms);
@@ -2042,7 +2044,6 @@ const NewPage = () => {
       if (v.valid) {
         let ruleObj = toRuleObjNew(terms);
         if (!ruleObj) {
-          console.log("/api/name/" + terms[1]);
           const res = fetch("/api/name/" + terms[1]).then((raw) => {
             if (raw.status == 200) {
               raw.json().then((res) => {
@@ -2050,7 +2051,6 @@ const NewPage = () => {
                 setRulestr(res.rule.rulestr);
                 setRulename(terms[1]);
                 if (terms.length == 3) {
-                  console.log(terms[2]);
                   ruleObj.pattern = terms[2].substring(1);
                 }
                 useRuleObj(ruleObj);
@@ -2319,8 +2319,7 @@ const NewPage = () => {
                 </Popup>}
               </div>
 
-              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => doReroute(rule.dimensions == 2 ? randomRule() : "/R" + (Math.floor(Math.random() * 256)).toString(),
-                                                                                                           rule.pattern)}>
+              <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => doReroute(randomRule(), rule.pattern)}>
                 <div className = "dark:bg-[url('../new.png')] bg-[url('../new_light.png')] bg-left w-[4.5rem] h-[4.5rem] bg-contain ml-1 bg-no-repeat"></div>
               </Button>
                <Button isIconOnly disableRipple = {true} radius = {"none"} onPressStart = {(e) => {theme == "dark" ? setTheme("light") : setTheme("dark")}}>
