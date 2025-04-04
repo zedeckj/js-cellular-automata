@@ -1,4 +1,4 @@
-## Cellular Automata Rulestring Parser and Simulator
+## nxtlife: Cellular Automata Rulestring Parser and Simulator
 
 https://nxtlife.vercel.app/
 
