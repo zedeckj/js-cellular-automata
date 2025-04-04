@@ -1,38 +1,32 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+### Cellular Automata Rulestring Parser and Simulator
 
-## Getting Started
+https://js-cellular-automata.vercel.app/
 
-First, run the development server:
+This is an old NextJS project I made after struggling to find an online simulator capable of running the common notations for cellular automata rules that are [Life-like](https://conwaylife.com/wiki/Life-like_cellular_automaton), [Elementary](https://en.wikipedia.org/wiki/Elementary_cellular_automaton), [Generations based](https://conwaylife.com/wiki/Generations), or [BSFKL](https://conwaylife.com/wiki/BSFKL). This simulator also supports [Hensel Notation](https://conwaylife.com/wiki/Isotropic_non-totalistic_rule#Square_grid). 
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
+The grammars for the different rule variations are as follows:
+
+```
+<Lifelike> ::= "B" <2d-neighbors> "/S" <2d-neighbors>
+
+<Elementary> ::= "R" <rule-number>
+
+<Generations> ::= <Lifelike> "/G" <DIGIT>
+
+<BSFKL> ::= <Lifelike> "/F" <2d-neighbors> "/K" <2d-neighbors> "/L" <2d-neighbors>
+
+Where <2d-neighbors> is a string of ascending digits bound from 0 to 8,
+with the optional inclusion of Hensel notation modifiers. For example:
+- 23
+- -i34q
+- 089
+- ci3ai4c8
+- 
+- 2-c34z 
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+It's not necessary to fully understand the allowed notations to use this tool, clicking the right arrow icon will change the viewer to simulate a random valid rulestring.
 
-You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
 
-[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.js`.
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
