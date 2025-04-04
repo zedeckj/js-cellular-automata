@@ -1,4 +1,4 @@
-### Cellular Automata Rulestring Parser and Simulator
+## Cellular Automata Rulestring Parser and Simulator
 
 https://js-cellular-automata.vercel.app/
 
@@ -25,7 +25,7 @@ with the optional inclusion of Hensel notation modifiers. For example:
 - 2-c34z 
 ```
 
-It's not necessary to fully understand the allowed notations to use this tool, clicking the right arrow icon will change the viewer to simulate a random valid rulestring.
+It's not necessary to fully understand the syntax of rulestinrg notations to use this site, clicking the right arrow icon will change the viewer to simulate a random valid rulestring.
 
 
 
